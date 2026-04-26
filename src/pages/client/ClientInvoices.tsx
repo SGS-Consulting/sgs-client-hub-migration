@@ -5,16 +5,47 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusBadge, INVOICE_STATUSES } from "@/lib/status";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { FileDown } from "lucide-react";
+import { generateInvoicePdf } from "@/lib/invoicePdf";
+import { toast } from "sonner";
 
 const ClientInvoices = () => {
   const { clientId } = useCurrentClientId();
   const [invoices, setInvoices] = useState<any[]>([]);
+  const [client, setClient] = useState<any>(null);
 
   useEffect(() => {
     if (!clientId) return;
     supabase.from("invoices").select("*, invoice_items(*)").eq("client_id", clientId)
       .order("created_at", { ascending: false }).then(({ data }) => setInvoices(data ?? []));
+    supabase.from("clients").select("*").eq("id", clientId).maybeSingle().then(({ data }) => setClient(data));
   }, [clientId]);
+
+  const downloadPdf = async (inv: any) => {
+    if (!client) return;
+    try {
+      await generateInvoicePdf({
+        invoice_number: inv.invoice_number,
+        issue_date: inv.issue_date,
+        due_date: inv.due_date,
+        notes: inv.notes,
+        subtotal: Number(inv.subtotal),
+        tax: Number(inv.tax),
+        total: Number(inv.total),
+        status: inv.status,
+        client,
+        items: (inv.invoice_items ?? []).sort((a: any, b: any) => a.sort_order - b.sort_order).map((it: any) => ({
+          description: it.description,
+          quantity: Number(it.quantity),
+          unit_price: Number(it.unit_price),
+          line_total: Number(it.line_total),
+        })),
+      });
+    } catch {
+      toast.error("Error al generar el PDF");
+    }
+  };
 
   const today = new Date().toISOString().split("T")[0];
 
