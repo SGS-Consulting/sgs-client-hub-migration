@@ -27,10 +27,10 @@
     --primary-foreground: 220 30% 10%;
     --primary-glow: 44 90% 62%;
 
-    /* Corporate dark — sidebars, headers, brand surfaces */
-    --brand: 220 30% 10%;
+    /* Corporate dark — sidebars, headers, brand surfaces (#14181F) */
+    --brand: 218 19% 10%;
     --brand-foreground: 40 20% 98%;
-    --brand-muted: 220 20% 22%;
+    --brand-muted: 218 15% 20%;
 
     --secondary: 220 14% 96%;
     --secondary-foreground: 220 25% 18%;
