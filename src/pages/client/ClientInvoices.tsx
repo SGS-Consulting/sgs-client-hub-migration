@@ -59,10 +59,10 @@ const ClientInvoices = () => {
         <Table>
           <TableHeader><TableRow>
             <TableHead>Número</TableHead><TableHead>Emisión</TableHead><TableHead>Vencimiento</TableHead>
-            <TableHead>Total</TableHead><TableHead>Estado</TableHead>
+            <TableHead>Total</TableHead><TableHead>Estado</TableHead><TableHead className="text-right">PDF</TableHead>
           </TableRow></TableHeader>
           <TableBody>
-            {invoices.length === 0 ? <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Sin facturas</TableCell></TableRow>
+            {invoices.length === 0 ? <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Sin facturas</TableCell></TableRow>
             : invoices.map((i) => {
               const overdue = i.due_date && i.due_date < today && i.status !== "paid" && i.status !== "cancelled";
               return (
@@ -74,6 +74,11 @@ const ClientInvoices = () => {
                   </TableCell>
                   <TableCell className="font-semibold">${Number(i.total).toLocaleString()}</TableCell>
                   <TableCell><StatusBadge value={overdue ? "overdue" : i.status} options={INVOICE_STATUSES} /></TableCell>
+                  <TableCell className="text-right">
+                    <Button size="sm" variant="ghost" onClick={() => downloadPdf(i)}>
+                      <FileDown className="h-4 w-4" /> Descargar
+                    </Button>
+                  </TableCell>
                 </TableRow>
               );
             })}
