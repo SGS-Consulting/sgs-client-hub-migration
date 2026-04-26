@@ -1,14 +1,18 @@
 import { Navigate, useLocation } from "react-router-dom";
-import { useAuth, AppRole } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
+import { can, isInternal, type Capability } from "@/lib/permissions";
 
 interface Props {
   children: React.ReactNode;
-  requireRole?: AppRole;
+  /** "internal" = any non-client role, "client" = only client portal */
+  requireArea?: "internal" | "client";
+  /** Optional capability — if missing the user is redirected to the area's home. */
+  requireCap?: Capability;
 }
 
-export const ProtectedRoute = ({ children, requireRole }: Props) => {
-  const { user, role, loading } = useAuth();
+export const ProtectedRoute = ({ children, requireArea, requireCap }: Props) => {
+  const { user, role, roles, loading } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -23,9 +27,16 @@ export const ProtectedRoute = ({ children, requireRole }: Props) => {
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  if (requireRole && role !== requireRole) {
-    // Send to their own dashboard
-    return <Navigate to={role === "admin" ? "/admin" : "/portal"} replace />;
+  if (requireArea === "internal" && !isInternal(role)) {
+    return <Navigate to="/portal" replace />;
+  }
+  if (requireArea === "client" && role !== "client") {
+    return <Navigate to="/admin" replace />;
+  }
+
+  if (requireCap && !can(roles, requireCap)) {
+    // No permission for this section — bounce to admin home
+    return <Navigate to="/admin" replace />;
   }
 
   return <>{children}</>;
