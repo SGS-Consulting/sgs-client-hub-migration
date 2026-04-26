@@ -29,7 +29,8 @@ import { Button } from "@/components/ui/button";
 
 const mainItems = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard, end: true },
-  { title: "Tareas", url: "/admin/tasks", icon: KanbanSquare },
+  { title: "Workflow Hub", url: "/admin/tasks", icon: KanbanSquare, end: true },
+  { title: "Workspaces", url: "/admin/tasks/workspaces", icon: Briefcase },
   { title: "Clientes", url: "/admin/clients", icon: Users },
   { title: "Documentos", url: "/admin/documents", icon: FileText },
   { title: "Facturas", url: "/admin/invoices", icon: Receipt },

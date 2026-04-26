@@ -13,6 +13,8 @@ import Auth from "./pages/Auth.tsx";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminTasks from "./pages/admin/AdminTasks";
+import AdminWorkspaces from "./pages/admin/AdminWorkspaces";
+import AdminWorkspaceDetail from "./pages/admin/AdminWorkspaceDetail";
 import AdminClients from "./pages/admin/AdminClients";
 import AdminClientDetail from "./pages/admin/AdminClientDetail";
 import AdminDocuments from "./pages/admin/AdminDocuments";
@@ -48,6 +50,8 @@ const App = () => (
             }>
               <Route index element={<AdminDashboard />} />
               <Route path="tasks" element={<AdminTasks />} />
+              <Route path="tasks/workspaces" element={<AdminWorkspaces />} />
+              <Route path="tasks/workspaces/:id" element={<AdminWorkspaceDetail />} />
               <Route path="clients" element={<AdminClients />} />
               <Route path="clients/:id" element={<AdminClientDetail />} />
               <Route path="documents" element={<AdminDocuments />} />
