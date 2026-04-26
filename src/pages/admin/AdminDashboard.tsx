@@ -9,6 +9,8 @@ import {
   ArrowUpRight, ArrowDownRight, Download, Plus, ArrowRight, Briefcase, Clock,
 } from "lucide-react";
 import dashboardHero from "@/assets/dashboard-hero.jpg";
+import { useAuth } from "@/contexts/AuthContext";
+import { can } from "@/lib/permissions";
 
 interface Stats {
   activeClients: number;
