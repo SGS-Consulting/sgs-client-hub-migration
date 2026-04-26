@@ -133,7 +133,7 @@ const Auth = () => {
             Gestiona tu información, documentos, facturas y servicios con SGS Consulting Group desde un solo lugar.
           </p>
           <p className="text-xs text-brand-foreground/50 pt-4">
-            © {new Date().getFullYear()} SGS Consulting Group. All rights reserved.
+            © {new Date().getFullYear()} SGS Consulting Group. Todos los derechos reservados.
           </p>
         </div>
       </div>

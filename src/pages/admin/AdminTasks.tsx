@@ -85,17 +85,17 @@ const AdminTasks = () => {
                 <FolderOpen className="h-7 w-7" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold">Workflow Hub</h1>
+                <h1 className="text-2xl font-bold">Centro de trabajo</h1>
                 <p className="text-sm text-muted-foreground">Panel de gestión de trabajo del equipo SGS</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <Select value={filter} onValueChange={setFilter}>
                 <SelectTrigger className="w-[220px]">
-                  <SelectValue placeholder="All workspaces" />
+                  <SelectValue placeholder="Todos los workspaces" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All workspaces</SelectItem>
+                  <SelectItem value="all">Todos los workspaces</SelectItem>
                   {workspaces.map((w) => (
                     <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
                   ))}
@@ -106,7 +106,7 @@ const AdminTasks = () => {
               </Button>
               <Button asChild>
                 <Link to="/admin/tasks/workspaces">
-                  <Folder className="h-4 w-4" /> View workspaces
+                  <Folder className="h-4 w-4" /> Ver workspaces
                 </Link>
               </Button>
             </div>
@@ -142,7 +142,7 @@ const AdminTasks = () => {
       <Card>
         <CardContent className="p-5 space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold flex items-center gap-2"><Zap className="h-4 w-4 text-primary" /> What I'm working on now</h2>
+            <h2 className="font-semibold flex items-center gap-2"><Zap className="h-4 w-4 text-primary" /> En lo que trabajo ahora</h2>
             <Badge variant="secondary">{myActive.length}</Badge>
           </div>
           <div className="divide-y">
@@ -176,7 +176,7 @@ const AdminTasks = () => {
         <Card>
           <CardContent className="p-5 space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="font-semibold flex items-center gap-2"><ListChecks className="h-4 w-4 text-primary" /> My Assigned Tasks</h2>
+              <h2 className="font-semibold flex items-center gap-2"><ListChecks className="h-4 w-4 text-primary" /> Mis tareas asignadas</h2>
               <Badge variant="secondary">{myAssigned.length}</Badge>
             </div>
             <div className="divide-y max-h-[400px] overflow-y-auto">
@@ -197,7 +197,7 @@ const AdminTasks = () => {
         <Card>
           <CardContent className="p-5 space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="font-semibold flex items-center gap-2"><Eye className="h-4 w-4 text-primary" /> Pending Reviews</h2>
+              <h2 className="font-semibold flex items-center gap-2"><Eye className="h-4 w-4 text-primary" /> Pendientes de revisión</h2>
               <Badge variant="secondary">{pendingReview.length}</Badge>
             </div>
             <div className="divide-y">
@@ -210,7 +210,7 @@ const AdminTasks = () => {
                       <p className="text-xs text-muted-foreground">{wsName(t.workspace_id)}</p>
                     </div>
                   </div>
-                  <Button size="sm" variant="outline">Review</Button>
+                  <Button size="sm" variant="outline">Revisar</Button>
                 </Link>
               ))}
               {pendingReview.length === 0 && <p className="text-sm text-muted-foreground py-4 text-center">Nada por revisar.</p>}
@@ -223,9 +223,9 @@ const AdminTasks = () => {
       <Card>
         <CardContent className="p-5 space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold flex items-center gap-2"><Folder className="h-4 w-4 text-primary" /> My Workspaces</h2>
+            <h2 className="font-semibold flex items-center gap-2"><Folder className="h-4 w-4 text-primary" /> Mis workspaces</h2>
             <Button asChild variant="ghost" size="sm">
-              <Link to="/admin/tasks/workspaces">View all →</Link>
+              <Link to="/admin/tasks/workspaces">Ver todos →</Link>
             </Button>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -238,13 +238,13 @@ const AdminTasks = () => {
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-medium truncate">{w.name}</p>
-                    <p className="text-xs text-muted-foreground">{count} tasks</p>
+                    <p className="text-xs text-muted-foreground">{count} tareas</p>
                   </div>
                 </Link>
               );
             })}
             <Link to="/admin/tasks/workspaces" className="border-2 border-dashed rounded-lg p-3 hover:bg-muted/30 transition flex items-center justify-center text-muted-foreground hover:text-primary">
-              <Plus className="h-4 w-4 mr-1" /> New
+              <Plus className="h-4 w-4 mr-1" /> Nuevo
             </Link>
           </div>
         </CardContent>
