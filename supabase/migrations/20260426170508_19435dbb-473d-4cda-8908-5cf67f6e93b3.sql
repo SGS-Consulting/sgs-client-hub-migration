@@ -1,0 +1,5 @@
+
+-- 1. Añadir nuevos valores al enum app_role
+ALTER TYPE public.app_role ADD VALUE IF NOT EXISTS 'finance';
+ALTER TYPE public.app_role ADD VALUE IF NOT EXISTS 'operations';
+ALTER TYPE public.app_role ADD VALUE IF NOT EXISTS 'staff';

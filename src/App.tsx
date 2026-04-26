@@ -44,26 +44,46 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
 
-            {/* Admin */}
+            {/* Admin (internal team) */}
             <Route path="/admin" element={
-              <ProtectedRoute requireRole="admin"><AdminLayout /></ProtectedRoute>
+              <ProtectedRoute requireArea="internal"><AdminLayout /></ProtectedRoute>
             }>
               <Route index element={<AdminDashboard />} />
-              <Route path="tasks" element={<AdminTasks />} />
-              <Route path="tasks/workspaces" element={<AdminWorkspaces />} />
-              <Route path="tasks/workspaces/:id" element={<AdminWorkspaceDetail />} />
-              <Route path="clients" element={<AdminClients />} />
-              <Route path="clients/:id" element={<AdminClientDetail />} />
-              <Route path="documents" element={<AdminDocuments />} />
-              <Route path="invoices" element={<AdminInvoices />} />
-              <Route path="services" element={<AdminServices />} />
-              <Route path="team" element={<AdminTeam />} />
-              <Route path="settings" element={<AdminSettings />} />
+              <Route path="tasks" element={
+                <ProtectedRoute requireArea="internal" requireCap="view:tasks"><AdminTasks /></ProtectedRoute>
+              } />
+              <Route path="tasks/workspaces" element={
+                <ProtectedRoute requireArea="internal" requireCap="view:workspaces"><AdminWorkspaces /></ProtectedRoute>
+              } />
+              <Route path="tasks/workspaces/:id" element={
+                <ProtectedRoute requireArea="internal" requireCap="view:workspaces"><AdminWorkspaceDetail /></ProtectedRoute>
+              } />
+              <Route path="clients" element={
+                <ProtectedRoute requireArea="internal" requireCap="view:clients"><AdminClients /></ProtectedRoute>
+              } />
+              <Route path="clients/:id" element={
+                <ProtectedRoute requireArea="internal" requireCap="view:clients"><AdminClientDetail /></ProtectedRoute>
+              } />
+              <Route path="documents" element={
+                <ProtectedRoute requireArea="internal" requireCap="view:documents"><AdminDocuments /></ProtectedRoute>
+              } />
+              <Route path="invoices" element={
+                <ProtectedRoute requireArea="internal" requireCap="view:finance"><AdminInvoices /></ProtectedRoute>
+              } />
+              <Route path="services" element={
+                <ProtectedRoute requireArea="internal" requireCap="view:services"><AdminServices /></ProtectedRoute>
+              } />
+              <Route path="team" element={
+                <ProtectedRoute requireArea="internal" requireCap="view:team"><AdminTeam /></ProtectedRoute>
+              } />
+              <Route path="settings" element={
+                <ProtectedRoute requireArea="internal" requireCap="view:settings"><AdminSettings /></ProtectedRoute>
+              } />
             </Route>
 
             {/* Client portal */}
             <Route path="/portal" element={
-              <ProtectedRoute requireRole="client"><ClientLayout /></ProtectedRoute>
+              <ProtectedRoute requireArea="client"><ClientLayout /></ProtectedRoute>
             }>
               <Route index element={<ClientDashboard />} />
               <Route path="profile" element={<ClientProfile />} />

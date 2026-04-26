@@ -10,7 +10,7 @@ const Index = () => {
   useEffect(() => {
     if (loading) return;
     if (!user) navigate("/auth", { replace: true });
-    else if (role === "admin") navigate("/admin", { replace: true });
+    else if (role && role !== "client") navigate("/admin", { replace: true });
     else navigate("/portal", { replace: true });
   }, [user, role, loading, navigate]);
 

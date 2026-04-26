@@ -2,12 +2,15 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
-export type AppRole = "admin" | "client";
+export type AppRole = "admin" | "finance" | "operations" | "staff" | "client";
 
 interface AuthContextValue {
   user: User | null;
   session: Session | null;
+  /** Highest-privilege internal role (admin > finance/operations > staff), or "client", or null */
   role: AppRole | null;
+  /** All roles the user has (an internal user can have several). */
+  roles: AppRole[];
   loading: boolean;
   signOut: () => Promise<void>;
   refreshRole: () => Promise<void>;
@@ -15,9 +18,12 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+const PRIORITY: AppRole[] = ["admin", "finance", "operations", "staff", "client"];
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
+  const [roles, setRoles] = useState<AppRole[]>([]);
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -28,28 +34,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .eq("user_id", userId);
 
     if (!data || data.length === 0) {
+      setRoles([]);
       setRole(null);
       return;
     }
-    // Admin wins if user has both
-    const hasAdmin = data.some((r) => r.role === "admin");
-    setRole(hasAdmin ? "admin" : "client");
+    const list = data.map((r: any) => r.role as AppRole);
+    setRoles(list);
+    const top = PRIORITY.find((p) => list.includes(p)) ?? null;
+    setRole(top);
   };
 
   useEffect(() => {
-    // 1. Set up listener FIRST
     const { data: subscription } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession);
       setUser(newSession?.user ?? null);
       if (newSession?.user) {
-        // defer to avoid deadlock
         setTimeout(() => fetchRole(newSession.user.id), 0);
       } else {
+        setRoles([]);
         setRole(null);
       }
     });
 
-    // 2. Then check existing session
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setUser(data.session?.user ?? null);
@@ -65,6 +71,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    setRoles([]);
     setRole(null);
   };
 
@@ -73,7 +80,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, role, loading, signOut, refreshRole }}>
+    <AuthContext.Provider value={{ user, session, role, roles, loading, signOut, refreshRole }}>
       {children}
     </AuthContext.Provider>
   );
