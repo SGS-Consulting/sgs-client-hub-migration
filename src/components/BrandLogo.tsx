@@ -15,8 +15,10 @@ export const BrandLogo = ({ className, variant = "light" }: Props) => {
     <img
       src={logo}
       alt="SGS Consulting Group"
+      width={238}
+      height={68}
       className={cn(
-        "h-10 w-auto select-none",
+        "h-10 w-auto max-w-full object-contain select-none",
         variant === "dark" && "invert brightness-0 contrast-100",
         className,
       )}
