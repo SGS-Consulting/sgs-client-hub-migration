@@ -34,7 +34,7 @@ const Auth = () => {
   // If already logged in, redirect
   useEffect(() => {
     if (!authLoading && user && role) {
-      navigate(role === "admin" ? "/admin" : "/portal", { replace: true });
+      navigate(role !== "client" ? "/admin" : "/portal", { replace: true });
     }
   }, [user, role, authLoading, navigate]);
 
