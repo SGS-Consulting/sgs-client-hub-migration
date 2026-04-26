@@ -8,6 +8,7 @@ import {
   Users, KanbanSquare, AlertCircle, Receipt, DollarSign, FileText,
   ArrowUpRight, ArrowDownRight, Download, Plus, ArrowRight, Briefcase, Clock,
 } from "lucide-react";
+import dashboardHero from "@/assets/dashboard-hero.jpg";
 
 interface Stats {
   activeClients: number;
@@ -125,22 +126,32 @@ const AdminDashboard = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Bienvenido{adminName ? `, ${adminName}` : ""}
-          </h1>
-          <p className="text-sm text-muted-foreground capitalize mt-1">{today()}</p>
+      {/* Header / Hero */}
+      <div className="rounded-2xl bg-brand text-brand-foreground p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6 overflow-hidden relative">
+        <div className="flex-1 space-y-4 relative z-10">
+          <div>
+            <p className="text-xs uppercase tracking-widest text-brand-foreground/60">Panel administrativo</p>
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mt-2">
+              Bienvenido{adminName ? `, ${adminName}` : ""}
+            </h1>
+            <p className="text-sm text-brand-foreground/70 capitalize mt-1">{today()}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" size="sm" className="gap-2">
+              <Download className="h-4 w-4" /> Exportar
+            </Button>
+            <Button asChild size="sm" className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
+              <Link to="/admin/clients"><Plus className="h-4 w-4" /> Nuevo cliente</Link>
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-2">
-            <Download className="h-4 w-4" /> Exportar
-          </Button>
-          <Button asChild size="sm" className="gap-2">
-            <Link to="/admin/clients"><Plus className="h-4 w-4" /> Nuevo cliente</Link>
-          </Button>
-        </div>
+        <img
+          src={dashboardHero}
+          alt=""
+          width={1920}
+          height={1080}
+          className="hidden sm:block w-72 h-auto object-contain relative z-10 mix-blend-screen opacity-90"
+        />
       </div>
 
       {/* Top metrics */}
