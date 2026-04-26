@@ -107,7 +107,7 @@ const AdminWorkspaces = () => {
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search workspace..."
+              placeholder="Buscar workspace..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-8 w-[240px]"
@@ -115,18 +115,18 @@ const AdminWorkspaces = () => {
           </div>
           <label className="flex items-center gap-2 text-sm">
             <Checkbox checked={showArchived} onCheckedChange={(v) => setShowArchived(!!v)} />
-            Show archived
+            Mostrar archivados
           </label>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button><Plus className="h-4 w-4" /> New workspace</Button>
+              <Button><Plus className="h-4 w-4" /> Nuevo workspace</Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader><DialogTitle>Nuevo workspace</DialogTitle></DialogHeader>
               <div className="space-y-3">
                 <div className="space-y-2">
                   <Label>Nombre</Label>
-                  <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej. OPERATIONS Weekly Analysis - W16 2026" />
+                  <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej. Análisis semanal de operaciones - S16 2026" />
                 </div>
                 <div className="space-y-2">
                   <Label>Descripción</Label>
@@ -185,7 +185,7 @@ const AdminWorkspaces = () => {
           <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-2">
             <Plus className="h-6 w-6" />
           </div>
-          <span className="text-sm font-medium">Create workspace</span>
+          <span className="text-sm font-medium">Crear workspace</span>
         </button>
 
         {filtered.map((w) => {
@@ -201,7 +201,7 @@ const AdminWorkspaces = () => {
                     {statusOpt && (
                       <span className={cn("text-xs px-2 py-0.5 rounded-full", statusOpt.color)}>{statusOpt.label}</span>
                     )}
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-muted">{w.visibility === "public" ? "Public" : "Private"}</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-muted">{w.visibility === "public" ? "Público" : "Privado"}</span>
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(w.id)}>
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
@@ -212,7 +212,7 @@ const AdminWorkspaces = () => {
                   {w.description && <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{w.description}</p>}
                 </Link>
                 <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
-                  <span>📋 {taskCounts[w.id] ?? 0} tasks</span>
+                  <span>📋 {taskCounts[w.id] ?? 0} tareas</span>
                   <span>{new Date(w.created_at).toLocaleDateString()}</span>
                 </div>
               </CardContent>

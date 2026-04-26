@@ -91,12 +91,12 @@ const AdminWorkspaceDetail = () => {
                 <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="text-2xl font-bold">{ws.name}</h1>
                   {statusOpt && <span className={cn("text-xs px-2 py-0.5 rounded-full", statusOpt.color)}>{statusOpt.label}</span>}
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-muted">{ws.visibility === "public" ? "Public" : "Private"}</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-muted">{ws.visibility === "public" ? "Público" : "Privado"}</span>
                 </div>
                 {ws.description && <p className="text-sm text-muted-foreground mt-1 max-w-2xl">{ws.description}</p>}
                 {ws.due_date && (
                   <p className="text-xs mt-1.5">
-                    <span className="font-medium">Workflow due date:</span>{" "}
+                    <span className="font-medium">Fecha límite:</span>{" "}
                     <span className="text-destructive">{new Date(ws.due_date).toLocaleDateString()}</span>
                   </p>
                 )}
@@ -105,9 +105,9 @@ const AdminWorkspaceDetail = () => {
 
             <div className="flex items-center gap-2">
               <Button variant="outline" size="icon" onClick={load}><RefreshCw className="h-4 w-4" /></Button>
-              <Button variant="outline" onClick={() => setMemDialog(true)}><Users className="h-4 w-4" /> Members</Button>
-              <Button variant="outline" onClick={() => setColDialog(true)}><SettingsIcon className="h-4 w-4" /> Columns</Button>
-              <Button onClick={() => setTaskDialog(true)}><Plus className="h-4 w-4" /> New Task</Button>
+              <Button variant="outline" onClick={() => setMemDialog(true)}><Users className="h-4 w-4" /> Miembros</Button>
+              <Button variant="outline" onClick={() => setColDialog(true)}><SettingsIcon className="h-4 w-4" /> Columnas</Button>
+              <Button onClick={() => setTaskDialog(true)}><Plus className="h-4 w-4" /> Nueva tarea</Button>
             </div>
           </div>
         </CardContent>

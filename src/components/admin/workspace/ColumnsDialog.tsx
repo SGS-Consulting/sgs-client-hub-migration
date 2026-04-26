@@ -102,7 +102,7 @@ export const ColumnsDialog = ({ workspaceId, open, onOpenChange, onChanged }: Pr
                 />
                 <label className="flex items-center gap-2 text-xs whitespace-nowrap">
                   <Switch checked={c.is_done_column} onCheckedChange={(v) => updateColumn(c.id, { is_done_column: v })} />
-                  Done
+                  Final
                 </label>
                 <Button variant="ghost" size="icon" className="text-destructive" onClick={() => removeColumn(c.id)}>
                   <Trash2 className="h-4 w-4" />
