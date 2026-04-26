@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import authIllustration from "@/assets/auth-illustration.jpg";
 
 const emailSchema = z.string().trim().email("Correo inválido").max(255);
 const passwordSchema = z.string().min(8, "Mínimo 8 caracteres").max(72);
@@ -113,19 +114,28 @@ const Auth = () => {
   return (
     <div className="min-h-screen grid lg:grid-cols-2 bg-background">
       {/* Left: brand panel */}
-      <div className="hidden lg:flex flex-col justify-between bg-gradient-brand text-brand-foreground p-12">
-        <BrandLogo variant="dark" className="h-12" />
-        <div className="space-y-4 max-w-md">
-          <h1 className="text-4xl font-bold leading-tight">
+      <div className="hidden lg:flex flex-col justify-between bg-gradient-brand text-brand-foreground p-12 relative overflow-hidden">
+        <BrandLogo variant="dark" className="h-12 relative z-10" />
+        <div className="relative z-10 flex justify-center">
+          <img
+            src={authIllustration}
+            alt=""
+            width={520}
+            height={520}
+            className="w-full max-w-md h-auto object-contain drop-shadow-2xl"
+          />
+        </div>
+        <div className="space-y-3 max-w-md relative z-10">
+          <h1 className="text-3xl font-bold leading-tight">
             Plataforma de gestión integral
           </h1>
-          <p className="text-brand-foreground/80 text-lg">
+          <p className="text-brand-foreground/70">
             Gestiona tu información, documentos, facturas y servicios con SGS Consulting Group desde un solo lugar.
           </p>
+          <p className="text-xs text-brand-foreground/50 pt-4">
+            © {new Date().getFullYear()} SGS Consulting Group. All rights reserved.
+          </p>
         </div>
-        <p className="text-sm text-brand-foreground/60">
-          © {new Date().getFullYear()} SGS Consulting Group. All rights reserved.
-        </p>
       </div>
 
       {/* Right: form */}
