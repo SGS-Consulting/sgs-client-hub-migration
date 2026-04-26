@@ -1,239 +1,254 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { TASK_STATUSES, PRIORITIES, StatusBadge } from "@/lib/status";
-import { Plus, Calendar, User as UserIcon } from "lucide-react";
-import { toast } from "sonner";
+import { Folder, FolderOpen, Plus, RefreshCw, Zap, ListChecks, Eye, Calendar as CalendarIcon } from "lucide-react";
+import { PRIORITIES, StatusBadge } from "@/lib/status";
 import { cn } from "@/lib/utils";
 
+type Workspace = { id: string; name: string; color: string; status: string };
+type ColumnAgg = { id: string; name: string; color: string; workspace_id: string; count: number };
 type Task = {
   id: string;
   title: string;
-  description: string | null;
-  status: string;
   priority: string;
   due_date: string | null;
-  client_id: string | null;
+  workspace_id: string | null;
+  column_id: string | null;
   assignee_id: string | null;
+  status: string;
 };
 
-type Client = { id: string; company_name: string };
-type Profile = { id: string; full_name: string | null; email: string };
-
 const AdminTasks = () => {
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [columns, setColumns] = useState<ColumnAgg[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [admins, setAdmins] = useState<Profile[]>([]);
-  const [open, setOpen] = useState(false);
-  const [draggedId, setDraggedId] = useState<string | null>(null);
-
-  // Form state
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [priority, setPriority] = useState("medium");
-  const [status, setStatus] = useState("open");
-  const [clientId, setClientId] = useState<string>("none");
-  const [assigneeId, setAssigneeId] = useState<string>("none");
-  const [dueDate, setDueDate] = useState("");
+  const [me, setMe] = useState<string | null>(null);
+  const [filter, setFilter] = useState<string>("all");
+  const [loading, setLoading] = useState(false);
 
   const load = async () => {
-    const [t, c, roles] = await Promise.all([
-      supabase.from("tasks").select("*").order("created_at", { ascending: false }),
-      supabase.from("clients").select("id, company_name").order("company_name"),
-      supabase.from("user_roles").select("user_id").eq("role", "admin"),
-    ]);
-    setTasks((t.data ?? []) as Task[]);
-    setClients((c.data ?? []) as Client[]);
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    setMe(user?.id ?? null);
 
-    const adminIds = (roles.data ?? []).map((r: any) => r.user_id);
-    if (adminIds.length) {
-      const { data: profs } = await supabase
-        .from("profiles")
-        .select("id, full_name, email")
-        .in("id", adminIds);
-      setAdmins((profs ?? []) as Profile[]);
-    }
+    const [ws, cols, ts] = await Promise.all([
+      supabase.from("workspaces").select("id, name, color, status").neq("status", "archived").order("created_at", { ascending: false }),
+      supabase.from("workspace_columns").select("id, name, color, workspace_id").order("sort_order"),
+      supabase.from("tasks").select("id, title, priority, due_date, workspace_id, column_id, assignee_id, status").order("updated_at", { ascending: false }).limit(200),
+    ]);
+
+    setWorkspaces((ws.data ?? []) as Workspace[]);
+    setTasks((ts.data ?? []) as Task[]);
+
+    // aggregate counts per column globally
+    const colArr: ColumnAgg[] = (cols.data ?? []).map((c: any) => ({
+      ...c,
+      count: (ts.data ?? []).filter((t: any) => t.column_id === c.id).length,
+    }));
+    setColumns(colArr);
+    setLoading(false);
   };
 
   useEffect(() => { load(); }, []);
 
-  const grouped = useMemo(() => {
-    const map: Record<string, Task[]> = {};
-    TASK_STATUSES.forEach((s) => (map[s.value] = []));
-    tasks.forEach((t) => { (map[t.status] ??= []).push(t); });
-    return map;
-  }, [tasks]);
+  const filteredTasks = tasks.filter((t) => filter === "all" || t.workspace_id === filter);
 
-  const handleCreate = async () => {
-    if (!title.trim()) {
-      toast.error("El título es obligatorio");
-      return;
-    }
-    const { data: { user } } = await supabase.auth.getUser();
-    const { error } = await supabase.from("tasks").insert({
-      title: title.trim(),
-      description: description.trim() || null,
-      priority: priority as any,
-      status: status as any,
-      client_id: clientId === "none" ? null : clientId,
-      assignee_id: assigneeId === "none" ? null : assigneeId,
-      due_date: dueDate || null,
-      created_by: user?.id ?? null,
-    });
-    if (error) { toast.error(error.message); return; }
-    toast.success("Tarea creada");
-    setOpen(false);
-    setTitle(""); setDescription(""); setPriority("medium"); setStatus("open");
-    setClientId("none"); setAssigneeId("none"); setDueDate("");
-    load();
-  };
+  // Global stats: group columns by name across all workspaces
+  const statsByName = columns.reduce<Record<string, { count: number; color: string }>>((acc, c) => {
+    if (!acc[c.name]) acc[c.name] = { count: 0, color: c.color };
+    acc[c.name].count += c.count;
+    return acc;
+  }, {});
 
-  const handleDrop = async (newStatus: string) => {
-    if (!draggedId) return;
-    const task = tasks.find((t) => t.id === draggedId);
-    if (!task || task.status === newStatus) { setDraggedId(null); return; }
-    setTasks((prev) => prev.map((t) => t.id === draggedId ? { ...t, status: newStatus } : t));
-    const { error } = await supabase.from("tasks").update({ status: newStatus as any }).eq("id", draggedId);
-    if (error) { toast.error("No se pudo actualizar"); load(); }
-    setDraggedId(null);
-  };
+  const myActive = filteredTasks.filter((t) => t.assignee_id === me && t.status === "in_progress").slice(0, 5);
+  const myAssigned = filteredTasks.filter((t) => t.assignee_id === me && t.status !== "closed");
+  const pendingReview = filteredTasks.filter((t) => {
+    const col = columns.find((c) => c.id === t.column_id);
+    return col?.name.toLowerCase().includes("review");
+  }).slice(0, 5);
 
-  const clientName = (id: string | null) => id ? clients.find((c) => c.id === id)?.company_name ?? "—" : null;
-  const assigneeName = (id: string | null) => id ? admins.find((a) => a.id === id)?.full_name ?? admins.find((a) => a.id === id)?.email ?? "—" : null;
+  const wsName = (id: string | null) => workspaces.find((w) => w.id === id)?.name ?? "—";
+  const wsColor = (id: string | null) => workspaces.find((w) => w.id === id)?.color ?? "#94a3b8";
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold">Tareas</h1>
-          <p className="text-sm text-muted-foreground">Tablero Kanban — arrastra para cambiar estado.</p>
-        </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button><Plus className="h-4 w-4" /> Nueva tarea</Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogHeader><DialogTitle>Nueva tarea</DialogTitle></DialogHeader>
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <Label>Título</Label>
-                <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+      {/* Header */}
+      <Card className="overflow-hidden">
+        <CardContent className="p-6">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="flex items-start gap-4">
+              <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary">
+                <FolderOpen className="h-7 w-7" />
               </div>
-              <div className="space-y-2">
-                <Label>Descripción</Label>
-                <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>Estado</Label>
-                  <Select value={status} onValueChange={setStatus}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {TASK_STATUSES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Prioridad</Label>
-                  <Select value={priority} onValueChange={setPriority}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {PRIORITIES.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Cliente</Label>
-                  <Select value={clientId} onValueChange={setClientId}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">— Sin cliente —</SelectItem>
-                      {clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Responsable</Label>
-                  <Select value={assigneeId} onValueChange={setAssigneeId}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">— Sin asignar —</SelectItem>
-                      {admins.map((a) => (
-                        <SelectItem key={a.id} value={a.id}>{a.full_name ?? a.email}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2 col-span-2">
-                  <Label>Fecha límite</Label>
-                  <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-                </div>
+              <div>
+                <h1 className="text-2xl font-bold">Workflow Hub</h1>
+                <p className="text-sm text-muted-foreground">Panel de gestión de trabajo del equipo SGS</p>
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-              <Button onClick={handleCreate}>Crear</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
-        {TASK_STATUSES.map((col) => (
-          <div
-            key={col.value}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={() => handleDrop(col.value)}
-            className="rounded-lg bg-muted/30 p-3 min-h-[400px] flex flex-col"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <StatusBadge value={col.value} options={TASK_STATUSES} />
-              <span className="text-xs text-muted-foreground">{grouped[col.value]?.length ?? 0}</span>
-            </div>
-            <div className="space-y-2 flex-1">
-              {(grouped[col.value] ?? []).map((task) => {
-                const overdue = task.due_date && task.due_date < new Date().toISOString().split("T")[0] && task.status !== "closed";
-                return (
-                  <Card
-                    key={task.id}
-                    draggable
-                    onDragStart={() => setDraggedId(task.id)}
-                    className={cn("cursor-grab active:cursor-grabbing transition", overdue && "border-destructive/50")}
-                  >
-                    <CardContent className="p-3 space-y-2">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm font-medium leading-snug">{task.title}</p>
-                        <StatusBadge value={task.priority} options={PRIORITIES} />
-                      </div>
-                      {task.description && (
-                        <p className="text-xs text-muted-foreground line-clamp-2">{task.description}</p>
-                      )}
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground pt-1">
-                        {clientName(task.client_id) && <span>{clientName(task.client_id)}</span>}
-                        {assigneeName(task.assignee_id) && (
-                          <span className="flex items-center gap-1"><UserIcon className="h-3 w-3" />{assigneeName(task.assignee_id)}</span>
-                        )}
-                        {task.due_date && (
-                          <span className={cn("flex items-center gap-1 ml-auto", overdue && "text-destructive")}>
-                            <Calendar className="h-3 w-3" />
-                            {new Date(task.due_date).toLocaleDateString()}
-                          </span>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+            <div className="flex items-center gap-2">
+              <Select value={filter} onValueChange={setFilter}>
+                <SelectTrigger className="w-[220px]">
+                  <SelectValue placeholder="All workspaces" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All workspaces</SelectItem>
+                  {workspaces.map((w) => (
+                    <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button variant="outline" size="icon" onClick={load} disabled={loading}>
+                <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+              </Button>
+              <Button asChild>
+                <Link to="/admin/tasks/workspaces">
+                  <Folder className="h-4 w-4" /> View workspaces
+                </Link>
+              </Button>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Status row */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        {Object.entries(statsByName).slice(0, 5).map(([name, { count, color }]) => (
+          <Card key={name} className="border-l-4" style={{ borderLeftColor: color }}>
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">{name}</p>
+                <p className="text-2xl font-bold">{count}</p>
+              </div>
+              <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${color}22`, color }}>
+                <ListChecks className="h-5 w-5" />
+              </div>
+            </CardContent>
+          </Card>
         ))}
+        {Object.keys(statsByName).length === 0 && (
+          <Card className="md:col-span-3 lg:col-span-5">
+            <CardContent className="p-6 text-center text-sm text-muted-foreground">
+              Aún no hay workspaces. <Link to="/admin/tasks/workspaces" className="text-primary underline">Crea el primero</Link>.
+            </CardContent>
+          </Card>
+        )}
       </div>
+
+      {/* What I'm working on now */}
+      <Card>
+        <CardContent className="p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold flex items-center gap-2"><Zap className="h-4 w-4 text-primary" /> What I'm working on now</h2>
+            <Badge variant="secondary">{myActive.length}</Badge>
+          </div>
+          <div className="divide-y">
+            {myActive.map((t) => (
+              <div key={t.id} className="flex items-center justify-between py-2.5 gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: wsColor(t.workspace_id) }} />
+                  <Link to={t.workspace_id ? `/admin/tasks/workspaces/${t.workspace_id}` : "#"} className="text-sm font-medium truncate hover:underline">{t.title}</Link>
+                  <span className="text-xs text-muted-foreground hidden md:inline">· {wsName(t.workspace_id)}</span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <StatusBadge value={t.priority} options={PRIORITIES} />
+                  {t.due_date && (
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <CalendarIcon className="h-3 w-3" />
+                      {new Date(t.due_date).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+            {myActive.length === 0 && (
+              <p className="text-sm text-muted-foreground py-4 text-center">No tienes tareas en progreso.</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Two columns */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card>
+          <CardContent className="p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold flex items-center gap-2"><ListChecks className="h-4 w-4 text-primary" /> My Assigned Tasks</h2>
+              <Badge variant="secondary">{myAssigned.length}</Badge>
+            </div>
+            <div className="divide-y max-h-[400px] overflow-y-auto">
+              {myAssigned.slice(0, 10).map((t) => (
+                <Link to={t.workspace_id ? `/admin/tasks/workspaces/${t.workspace_id}` : "#"} key={t.id} className="flex items-center justify-between py-2.5 gap-3 hover:bg-muted/30 px-2 rounded">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: wsColor(t.workspace_id) }} />
+                    <span className="text-sm truncate">{t.title}</span>
+                  </div>
+                  <StatusBadge value={t.priority} options={PRIORITIES} />
+                </Link>
+              ))}
+              {myAssigned.length === 0 && <p className="text-sm text-muted-foreground py-4 text-center">Sin asignaciones.</p>}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold flex items-center gap-2"><Eye className="h-4 w-4 text-primary" /> Pending Reviews</h2>
+              <Badge variant="secondary">{pendingReview.length}</Badge>
+            </div>
+            <div className="divide-y">
+              {pendingReview.map((t) => (
+                <Link to={t.workspace_id ? `/admin/tasks/workspaces/${t.workspace_id}` : "#"} key={t.id} className="flex items-center justify-between py-2.5 gap-3 hover:bg-muted/30 px-2 rounded">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: wsColor(t.workspace_id) }} />
+                    <div className="min-w-0">
+                      <p className="text-sm truncate">{t.title}</p>
+                      <p className="text-xs text-muted-foreground">{wsName(t.workspace_id)}</p>
+                    </div>
+                  </div>
+                  <Button size="sm" variant="outline">Review</Button>
+                </Link>
+              ))}
+              {pendingReview.length === 0 && <p className="text-sm text-muted-foreground py-4 text-center">Nada por revisar.</p>}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* My Workspaces strip */}
+      <Card>
+        <CardContent className="p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold flex items-center gap-2"><Folder className="h-4 w-4 text-primary" /> My Workspaces</h2>
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/admin/tasks/workspaces">View all →</Link>
+            </Button>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {workspaces.slice(0, 6).map((w) => {
+              const count = tasks.filter((t) => t.workspace_id === w.id).length;
+              return (
+                <Link key={w.id} to={`/admin/tasks/workspaces/${w.id}`} className="border rounded-lg p-3 hover:bg-muted/30 transition flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-md flex items-center justify-center text-white shrink-0" style={{ backgroundColor: w.color }}>
+                    <Folder className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{w.name}</p>
+                    <p className="text-xs text-muted-foreground">{count} tasks</p>
+                  </div>
+                </Link>
+              );
+            })}
+            <Link to="/admin/tasks/workspaces" className="border-2 border-dashed rounded-lg p-3 hover:bg-muted/30 transition flex items-center justify-center text-muted-foreground hover:text-primary">
+              <Plus className="h-4 w-4 mr-1" /> New
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
