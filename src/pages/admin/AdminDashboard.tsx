@@ -65,6 +65,12 @@ const MetricCard = ({
 );
 
 const AdminDashboard = () => {
+  const { roles } = useAuth();
+  const canFinance = can(roles, "view:finance");
+  const canClients = can(roles, "view:clients");
+  const canTasks = can(roles, "view:tasks");
+  const canDocs = can(roles, "view:documents");
+
   const [stats, setStats] = useState<Stats | null>(null);
   const [recent, setRecent] = useState<any[]>([]);
   const [adminName, setAdminName] = useState<string>("");
