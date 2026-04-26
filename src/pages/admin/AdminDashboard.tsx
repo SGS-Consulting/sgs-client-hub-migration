@@ -88,22 +88,25 @@ const AdminDashboard = () => {
         setAdminName(prof?.full_name || prof?.email?.split("@")[0] || "");
       }
 
+      // Build queries conditionally based on capabilities
+      const noop = Promise.resolve({ data: [], count: 0 } as any);
+
       const [clients, tasksOpen, tasksOverdue, invoicesPending, invoicesAll, docsPending, paidMonth, recentInv] = await Promise.all([
-        supabase.from("clients").select("id", { count: "exact", head: true }).eq("status", "active"),
-        supabase.from("tasks").select("id", { count: "exact", head: true }).neq("status", "closed"),
-        supabase.from("tasks").select("id", { count: "exact", head: true }).neq("status", "closed").lt("due_date", todayStr),
-        supabase.from("invoices").select("id", { count: "exact", head: true }).in("status", ["sent", "overdue"]),
-        supabase.from("invoices").select("total, status").in("status", ["sent", "overdue"]),
-        supabase.from("documents").select("id", { count: "exact", head: true }).eq("status", "pending_review"),
-        supabase.from("invoices").select("total").eq("status", "paid").gte("issue_date", monthStartStr),
-        supabase.from("invoices")
+        canClients ? supabase.from("clients").select("id", { count: "exact", head: true }).eq("status", "active") : noop,
+        canTasks ? supabase.from("tasks").select("id", { count: "exact", head: true }).neq("status", "closed") : noop,
+        canTasks ? supabase.from("tasks").select("id", { count: "exact", head: true }).neq("status", "closed").lt("due_date", todayStr) : noop,
+        canFinance ? supabase.from("invoices").select("id", { count: "exact", head: true }).in("status", ["sent", "overdue"]) : noop,
+        canFinance ? supabase.from("invoices").select("total, status").in("status", ["sent", "overdue"]) : noop,
+        canDocs ? supabase.from("documents").select("id", { count: "exact", head: true }).eq("status", "pending_review") : noop,
+        canFinance ? supabase.from("invoices").select("total").eq("status", "paid").gte("issue_date", monthStartStr) : noop,
+        canFinance ? supabase.from("invoices")
           .select("id, invoice_number, total, status, issue_date, client_id, clients(company_name)")
           .order("created_at", { ascending: false })
-          .limit(5),
+          .limit(5) : noop,
       ]);
 
-      const amountDue = (invoicesAll.data ?? []).reduce((acc, inv: any) => acc + Number(inv.total ?? 0), 0);
-      const monthRevenue = (paidMonth.data ?? []).reduce((acc, inv: any) => acc + Number(inv.total ?? 0), 0);
+      const amountDue = (invoicesAll.data ?? []).reduce((acc: number, inv: any) => acc + Number(inv.total ?? 0), 0);
+      const monthRevenue = (paidMonth.data ?? []).reduce((acc: number, inv: any) => acc + Number(inv.total ?? 0), 0);
 
       setStats({
         activeClients: clients.count ?? 0,
@@ -116,7 +119,7 @@ const AdminDashboard = () => {
       });
       setRecent(recentInv.data ?? []);
     })();
-  }, []);
+  }, [canClients, canTasks, canFinance, canDocs]);
 
   const fmtMoney = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
