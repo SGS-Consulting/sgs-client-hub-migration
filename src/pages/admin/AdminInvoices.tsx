@@ -29,6 +29,7 @@ const AdminInvoices = () => {
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split("T")[0]);
   const [dueDate, setDueDate] = useState("");
   const [notes, setNotes] = useState("");
+  const [paymentLink, setPaymentLink] = useState("");
   const [items, setItems] = useState<Item[]>([{ description: "", quantity: 1, unit_price: 0 }]);
   const [taxPct, setTaxPct] = useState(0);
 
@@ -67,7 +68,7 @@ const AdminInvoices = () => {
   };
 
   const resetForm = () => {
-    setClientId(""); setNotes(""); setDueDate(""); setTaxPct(0);
+    setClientId(""); setNotes(""); setDueDate(""); setTaxPct(0); setPaymentLink("");
     setItems([{ description: "", quantity: 1, unit_price: 0 }]);
     setIssueDate(new Date().toISOString().split("T")[0]);
   };
@@ -83,7 +84,8 @@ const AdminInvoices = () => {
     const { data: { user } } = await supabase.auth.getUser();
     const { data: inv, error } = await supabase.from("invoices").insert({
       client_id: clientId, issue_date: issueDate, due_date: dueDate || null,
-      subtotal, tax, total, notes: notes || null, status: "draft", created_by: user?.id,
+      subtotal, tax, total, notes: notes || null, status: "draft",
+      payment_link_url: paymentLink || null, created_by: user?.id,
     }).select().single();
     if (error || !inv) { toast.error(error?.message); return; }
 
@@ -265,6 +267,16 @@ const AdminInvoices = () => {
                   <Label>Notas (opcional)</Label>
                   <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Información de pago, términos, etc." />
                 </div>
+              </div>
+
+              {/* Stripe payment link */}
+              <div className="space-y-2">
+                <Label>Stripe payment link (optional)</Label>
+                <Input
+                  value={paymentLink}
+                  onChange={(e) => setPaymentLink(e.target.value)}
+                  placeholder="https://buy.stripe.com/..."
+                />
               </div>
             </div>
 

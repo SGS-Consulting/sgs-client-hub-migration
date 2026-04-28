@@ -163,6 +163,50 @@ export type Database = {
         }
         Relationships: []
       }
+      discovery_sessions: {
+        Row: {
+          id: string
+          client_id: string
+          scheduled_at: string
+          duration_minutes: number
+          attendees: string[]
+          outcome_notes: string | null
+          calendly_event_id: string | null
+          created_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          client_id: string
+          scheduled_at: string
+          duration_minutes?: number
+          attendees?: string[]
+          outcome_notes?: string | null
+          calendly_event_id?: string | null
+          created_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          client_id?: string
+          scheduled_at?: string
+          duration_minutes?: number
+          attendees?: string[]
+          outcome_notes?: string | null
+          calendly_event_id?: string | null
+          created_by?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discovery_sessions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
           category: Database["public"]["Enums"]["document_category"]
@@ -270,6 +314,7 @@ export type Database = {
           invoice_number: string
           issue_date: string
           notes: string | null
+          payment_link_url: string | null
           status: Database["public"]["Enums"]["invoice_status"]
           subtotal: number
           tax: number
@@ -285,6 +330,7 @@ export type Database = {
           invoice_number?: string
           issue_date?: string
           notes?: string | null
+          payment_link_url?: string | null
           status?: Database["public"]["Enums"]["invoice_status"]
           subtotal?: number
           tax?: number
@@ -300,6 +346,7 @@ export type Database = {
           invoice_number?: string
           issue_date?: string
           notes?: string | null
+          payment_link_url?: string | null
           status?: Database["public"]["Enums"]["invoice_status"]
           subtotal?: number
           tax?: number
@@ -310,6 +357,78 @@ export type Database = {
           {
             foreignKeyName: "invoices_client_id_fkey"
             columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      intake_submissions: {
+        Row: {
+          id: string
+          first_name: string
+          last_name: string
+          phone: string
+          email: string
+          company_name: string | null
+          incorporation_state: string | null
+          services_of_interest: string[]
+          explanation: string | null
+          non_marketing_consent: boolean
+          marketing_consent: boolean
+          status: string
+          reviewed_by: string | null
+          reviewed_at: string | null
+          converted_client_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          first_name: string
+          last_name: string
+          phone: string
+          email: string
+          company_name?: string | null
+          incorporation_state?: string | null
+          services_of_interest?: string[]
+          explanation?: string | null
+          non_marketing_consent?: boolean
+          marketing_consent?: boolean
+          status?: string
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          converted_client_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          first_name?: string
+          last_name?: string
+          phone?: string
+          email?: string
+          company_name?: string | null
+          incorporation_state?: string | null
+          services_of_interest?: string[]
+          explanation?: string | null
+          non_marketing_consent?: boolean
+          marketing_consent?: boolean
+          status?: string
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          converted_client_id?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intake_submissions_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intake_submissions_converted_client_id_fkey"
+            columns: ["converted_client_id"]
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
@@ -449,6 +568,47 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      service_task_templates: {
+        Row: {
+          id: string
+          service_id: string
+          title: string
+          description: string | null
+          default_priority: Database["public"]["Enums"]["task_priority"]
+          default_due_offset_days: number | null
+          sort_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          service_id: string
+          title: string
+          description?: string | null
+          default_priority?: Database["public"]["Enums"]["task_priority"]
+          default_due_offset_days?: number | null
+          sort_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          service_id?: string
+          title?: string
+          description?: string | null
+          default_priority?: Database["public"]["Enums"]["task_priority"]
+          default_due_offset_days?: number | null
+          sort_order?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_task_templates_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subtasks: {
         Row: {
@@ -897,6 +1057,7 @@ export type Database = {
         | "tax"
         | "financial"
         | "legal"
+        | "proposal"
         | "other"
       document_status: "pending_review" | "approved" | "rejected"
       entity_type:
@@ -1054,6 +1215,7 @@ export const Constants = {
         "tax",
         "financial",
         "legal",
+        "proposal",
         "other",
       ],
       document_status: ["pending_review", "approved", "rejected"],

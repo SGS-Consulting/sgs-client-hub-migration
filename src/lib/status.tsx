@@ -30,6 +30,13 @@ export const DOCUMENT_STATUSES = [
   { value: "rejected", label: "Rechazado", color: "bg-destructive/15 text-destructive" },
 ] as const;
 
+export const INTAKE_STATUSES = [
+  { value: "pending", label: "Pending", color: "bg-warning/20 text-warning-foreground" },
+  { value: "reviewed", label: "Reviewed", color: "bg-info/15 text-info" },
+  { value: "converted", label: "Converted", color: "bg-success/15 text-success" },
+  { value: "rejected", label: "Rejected", color: "bg-destructive/15 text-destructive" },
+] as const;
+
 type AnyOption = { value: string; label: string; color: string };
 
 export const StatusBadge = ({ value, options }: { value: string; options: readonly AnyOption[] }) => {

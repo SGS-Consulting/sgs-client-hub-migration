@@ -10,6 +10,7 @@ import {
   Settings,
   LogOut,
   FolderKanban,
+  Inbox,
 } from "lucide-react";
 import {
   Sidebar,
@@ -35,6 +36,7 @@ const mainItems: Item[] = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard, end: true, cap: "view:dashboard" },
   { title: "Centro de trabajo", url: "/admin/tasks", icon: KanbanSquare, end: true, cap: "view:tasks" },
   { title: "Workspaces", url: "/admin/tasks/workspaces", icon: FolderKanban, cap: "view:workspaces" },
+  { title: "Intake", url: "/admin/intake", icon: Inbox, cap: "view:clients" },
   { title: "Clientes", url: "/admin/clients", icon: Users, cap: "view:clients" },
   { title: "Documentos", url: "/admin/documents", icon: FileText, cap: "view:documents" },
   { title: "Facturas", url: "/admin/invoices", icon: Receipt, cap: "view:finance" },

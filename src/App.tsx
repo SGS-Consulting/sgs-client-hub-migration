@@ -9,6 +9,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Auth from "./pages/Auth.tsx";
+import Intake from "./pages/Intake.tsx";
 
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -17,6 +18,8 @@ import AdminWorkspaces from "./pages/admin/AdminWorkspaces";
 import AdminWorkspaceDetail from "./pages/admin/AdminWorkspaceDetail";
 import AdminClients from "./pages/admin/AdminClients";
 import AdminClientDetail from "./pages/admin/AdminClientDetail";
+import AdminIntake from "./pages/admin/AdminIntake";
+import AdminIntakeDetail from "./pages/admin/AdminIntakeDetail";
 import AdminDocuments from "./pages/admin/AdminDocuments";
 import AdminInvoices from "./pages/admin/AdminInvoices";
 import AdminServices from "./pages/admin/AdminServices";
@@ -43,6 +46,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/intake" element={<Intake />} />
 
             {/* Admin (internal team) */}
             <Route path="/admin" element={
@@ -63,6 +67,12 @@ const App = () => (
               } />
               <Route path="clients/:id" element={
                 <ProtectedRoute requireArea="internal" requireCap="view:clients"><AdminClientDetail /></ProtectedRoute>
+              } />
+              <Route path="intake" element={
+                <ProtectedRoute requireArea="internal" requireCap="view:clients"><AdminIntake /></ProtectedRoute>
+              } />
+              <Route path="intake/:id" element={
+                <ProtectedRoute requireArea="internal" requireCap="view:clients"><AdminIntakeDetail /></ProtectedRoute>
               } />
               <Route path="documents" element={
                 <ProtectedRoute requireArea="internal" requireCap="view:documents"><AdminDocuments /></ProtectedRoute>
