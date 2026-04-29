@@ -10,9 +10,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { ArrowLeft, Save, Plus, Upload, Mail, Copy, Receipt, Send } from "lucide-react";
+import { ArrowLeft, Save, Plus, Upload, Mail, Copy, Receipt, Send, Settings } from "lucide-react";
 import { StatusBadge, INVOICE_STATUSES, DOCUMENT_STATUSES, TASK_STATUSES } from "@/lib/status";
 import { SendTemplatedEmailDialog } from "@/components/admin/SendTemplatedEmailDialog";
+import { Sop03ServiceConfigDialog } from "@/components/admin/Sop03ServiceConfigDialog";
 import { toast } from "sonner";
 
 type DiscoverySession = {
@@ -320,6 +321,23 @@ const AdminClientDetail = () => {
     setEmailDialogOpen(true);
   };
 
+  // ---- SOP-03 service config dialog ----
+  const [sop03DialogOpen, setSop03DialogOpen] = useState(false);
+  const [sop03DialogTarget, setSop03DialogTarget] = useState<{
+    id: string;
+    qb_configured_at: string | null;
+    tax_firm_cadence: any;
+  } | null>(null);
+
+  const openSop03Config = (cs: any) => {
+    setSop03DialogTarget({
+      id: cs.id,
+      qb_configured_at: cs.qb_configured_at ?? null,
+      tax_firm_cadence: cs.tax_firm_cadence ?? null,
+    });
+    setSop03DialogOpen(true);
+  };
+
   // ---- Portal invite ----
   const [invitingPortal, setInvitingPortal] = useState(false);
   const sendPortalInvite = async () => {
@@ -581,22 +599,65 @@ const AdminClientDetail = () => {
                 {services.length === 0 ? <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Sin servicios contratados</TableCell></TableRow>
                 : services.map((cs) => {
                   const isBusinessFormation = cs.services?.name === "Business Formation & Structure";
+                  const isSop03 = cs.services?.name?.startsWith("Managed Accounting") || cs.services?.name === "Tax-Season Bookkeeping (One-Time)";
+                  const cadenceLabels: Record<string, string> = {
+                    quarterly: "Trimestral",
+                    semi_annual: "Semestral",
+                    tax_season_only: "Solo temp. impuestos",
+                  };
                   return (
                     <TableRow key={cs.id}>
-                      <TableCell>{cs.services?.name}</TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div>{cs.services?.name}</div>
+                          {isSop03 && (
+                            <div className="flex flex-wrap gap-1.5 text-xs">
+                              {cs.qb_configured_at ? (
+                                <span className="rounded-full border bg-muted px-2 py-0.5">
+                                  QB ✓ {new Date(cs.qb_configured_at).toLocaleDateString()}
+                                </span>
+                              ) : (
+                                <span className="rounded-full border border-dashed text-muted-foreground px-2 py-0.5">
+                                  QB sin configurar
+                                </span>
+                              )}
+                              {cs.tax_firm_cadence ? (
+                                <span className="rounded-full border bg-muted px-2 py-0.5">
+                                  {cadenceLabels[cs.tax_firm_cadence] ?? cs.tax_firm_cadence}
+                                </span>
+                              ) : (
+                                <span className="rounded-full border border-dashed text-muted-foreground px-2 py-0.5">
+                                  Cadencia sin definir
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell className="text-muted-foreground">{cs.services?.category}</TableCell>
                       <TableCell className="text-muted-foreground">{new Date(cs.started_at).toLocaleDateString()}</TableCell>
                       <TableCell>{cs.is_active ? "Sí" : "No"}</TableCell>
                       <TableCell className="text-right">
-                        {isBusinessFormation && cs.is_active && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openSendKitEmail(cs.id)}
-                          >
-                            <Send className="h-3.5 w-3.5" /> Send kit email
-                          </Button>
-                        )}
+                        <div className="flex justify-end gap-2 flex-wrap">
+                          {isBusinessFormation && cs.is_active && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openSendKitEmail(cs.id)}
+                            >
+                              <Send className="h-3.5 w-3.5" /> Send kit email
+                            </Button>
+                          )}
+                          {isSop03 && cs.is_active && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openSop03Config(cs)}
+                            >
+                              <Settings className="h-3.5 w-3.5" /> Configurar
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -763,6 +824,22 @@ const AdminClientDetail = () => {
           }}
           clientId={client.id}
           clientServiceId={emailDialogConfig.clientServiceId}
+        />
+      )}
+
+      {sop03DialogTarget && (
+        <Sop03ServiceConfigDialog
+          open={sop03DialogOpen}
+          onOpenChange={(open) => {
+            setSop03DialogOpen(open);
+            if (!open) setSop03DialogTarget(null);
+          }}
+          clientServiceId={sop03DialogTarget.id}
+          initial={{
+            qb_configured_at: sop03DialogTarget.qb_configured_at,
+            tax_firm_cadence: sop03DialogTarget.tax_firm_cadence,
+          }}
+          onSaved={load}
         />
       )}
     </div>

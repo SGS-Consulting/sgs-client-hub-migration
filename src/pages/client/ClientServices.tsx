@@ -20,7 +20,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Download, Check, FileText, Loader2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Download, Check, FileText, Loader2, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 
 type ClientService = {
@@ -29,6 +30,8 @@ type ClientService = {
   is_active: boolean;
   acknowledged_at: string | null;
   started_at: string;
+  qb_configured_at: string | null;
+  tax_firm_cadence: string | null;
   services: { name: string; category: string | null; description: string | null } | null;
 };
 
@@ -45,6 +48,7 @@ const ClientServices = () => {
   const [active, setActive] = useState<ClientService[]>([]);
   const [catalog, setCatalog] = useState<any[]>([]);
   const [documents, setDocuments] = useState<ClientDocument[]>([]);
+  const [openQueriesCount, setOpenQueriesCount] = useState(0);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [acknowledgingId, setAcknowledgingId] = useState<string | null>(null);
   const [confirmAckFor, setConfirmAckFor] = useState<ClientService | null>(null);
@@ -67,9 +71,20 @@ const ClientServices = () => {
       .from("documents")
       .select("id, file_path, file_name, category, created_at")
       .eq("client_id", clientId)
-      .in("category", ["corporate_kit", "completion_certificate"])
+      .in("category", [
+        "corporate_kit",
+        "completion_certificate",
+        "quarterly_report",
+        "annual_iul_review",
+      ])
       .order("created_at", { ascending: false });
     setDocuments((docs as ClientDocument[] | null) ?? []);
+    const { count } = await supabase
+      .from("client_queries")
+      .select("id", { count: "exact", head: true })
+      .eq("client_id", clientId)
+      .neq("status", "answered");
+    setOpenQueriesCount(count ?? 0);
   };
 
   useEffect(() => {
@@ -258,6 +273,153 @@ const ClientServices = () => {
     );
   };
 
+  const renderSop03Card = (cs: ClientService) => {
+    const reports = documents.filter(
+      (d) =>
+        d.category === "quarterly_report" &&
+        new Date(d.created_at) >= new Date(cs.started_at),
+    );
+    const iulReviews = documents.filter(
+      (d) =>
+        d.category === "annual_iul_review" &&
+        new Date(d.created_at) >= new Date(cs.started_at),
+    );
+    const isInSetup = !cs.qb_configured_at;
+    const status = cs.is_active
+      ? isInSetup
+        ? { label: "En configuración", tone: "in_progress" as const }
+        : { label: "Activo", tone: "active" as const }
+      : { label: "Cerrado", tone: "closed" as const };
+
+    return (
+      <Card key={cs.id} className="border-primary/50 md:col-span-2">
+        <CardHeader>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <CardTitle className="text-base">{cs.services?.name}</CardTitle>
+              <CardDescription>{cs.services?.category}</CardDescription>
+            </div>
+            <Badge
+              variant={
+                status.tone === "closed"
+                  ? "secondary"
+                  : status.tone === "active"
+                    ? "default"
+                    : "outline"
+              }
+            >
+              {status.label}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm">
+          {cs.services?.description && (
+            <p className="text-muted-foreground">{cs.services.description}</p>
+          )}
+
+          {/* Pending questions surface */}
+          {openQueriesCount > 0 && (
+            <Link
+              to="/portal/queries"
+              className="flex items-center justify-between gap-2 rounded-md border bg-muted/40 px-3 py-2 hover:bg-muted transition-colors"
+            >
+              <span className="flex items-center gap-2">
+                <MessageCircle className="h-4 w-4 text-primary" />
+                <span>
+                  Tenés{" "}
+                  <strong>
+                    {openQueriesCount}{" "}
+                    {openQueriesCount === 1 ? "pregunta" : "preguntas"}
+                  </strong>{" "}
+                  pendientes de tu equipo de contabilidad.
+                </span>
+              </span>
+              <span className="text-xs text-primary font-medium">Ver →</span>
+            </Link>
+          )}
+
+          {/* Quarterly reports */}
+          <div className="space-y-2">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Reportes trimestrales
+            </h3>
+            {reports.length > 0 ? (
+              <ul className="space-y-1">
+                {reports.map((d) => (
+                  <li
+                    key={d.id}
+                    className="flex items-center justify-between gap-2 rounded-md border bg-card px-3 py-2"
+                  >
+                    <span className="flex items-center gap-2 truncate">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      <span className="truncate">{d.file_name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(d.created_at).toLocaleDateString()}
+                      </span>
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => downloadDocument(d)}
+                      disabled={downloadingId === d.id}
+                    >
+                      {downloadingId === d.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Download className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Tus reportes trimestrales de pérdidas y ganancias aparecerán acá cuando estén listos.
+              </p>
+            )}
+          </div>
+
+          {/* Annual IUL reviews */}
+          {iulReviews.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Revisión anual de IUL (Octubre)
+              </h3>
+              <ul className="space-y-1">
+                {iulReviews.map((d) => (
+                  <li
+                    key={d.id}
+                    className="flex items-center justify-between gap-2 rounded-md border bg-card px-3 py-2"
+                  >
+                    <span className="flex items-center gap-2 truncate">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      <span className="truncate">{d.file_name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(d.created_at).toLocaleDateString()}
+                      </span>
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => downloadDocument(d)}
+                      disabled={downloadingId === d.id}
+                    >
+                      {downloadingId === d.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Download className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
   const renderGenericCard = (cs: ClientService) => (
     <Card key={cs.id} className="border-primary/50">
       <CardHeader>
@@ -298,11 +460,13 @@ const ClientServices = () => {
             Activos
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {visibleActive.map((cs) =>
-              cs.services?.name === "Business Formation & Structure"
-                ? renderSop01Card(cs)
-                : renderGenericCard(cs),
-            )}
+            {visibleActive.map((cs) => {
+              const name = cs.services?.name ?? "";
+              if (name === "Business Formation & Structure") return renderSop01Card(cs);
+              if (name.startsWith("Managed Accounting") || name === "Tax-Season Bookkeeping (One-Time)")
+                return renderSop03Card(cs);
+              return renderGenericCard(cs);
+            })}
           </div>
         </div>
       )}
