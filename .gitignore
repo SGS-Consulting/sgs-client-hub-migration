@@ -12,6 +12,14 @@ dist
 dist-ssr
 *.local
 
+# Secrets — Supabase keys, DB password, etc.
+.env
+.env.*
+!.env.example
+
+# Supabase CLI local state (link metadata, cached versions, pooler URL)
+supabase/.temp/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
