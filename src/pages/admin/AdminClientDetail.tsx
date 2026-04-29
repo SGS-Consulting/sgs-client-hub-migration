@@ -10,8 +10,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { ArrowLeft, Save, Plus, Upload, Mail, Copy, Receipt } from "lucide-react";
+import { ArrowLeft, Save, Plus, Upload, Mail, Copy, Receipt, Send } from "lucide-react";
 import { StatusBadge, INVOICE_STATUSES, DOCUMENT_STATUSES, TASK_STATUSES } from "@/lib/status";
+import { SendTemplatedEmailDialog } from "@/components/admin/SendTemplatedEmailDialog";
 import { toast } from "sonner";
 
 type DiscoverySession = {
@@ -301,6 +302,21 @@ const AdminClientDetail = () => {
     load();
   };
 
+  // ---- Send templated email dialog ----
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [emailDialogConfig, setEmailDialogConfig] = useState<{
+    templateKey: string;
+    clientServiceId?: string;
+  } | null>(null);
+
+  const openSendKitEmail = (clientServiceId: string) => {
+    setEmailDialogConfig({
+      templateKey: "sop01_kit_delivery",
+      clientServiceId,
+    });
+    setEmailDialogOpen(true);
+  };
+
   // ---- Portal invite ----
   const [invitingPortal, setInvitingPortal] = useState(false);
   const sendPortalInvite = async () => {
@@ -557,17 +573,31 @@ const AdminClientDetail = () => {
               </p>
             </div>
             <Table>
-              <TableHeader><TableRow><TableHead>Servicio</TableHead><TableHead>Categoría</TableHead><TableHead>Inicio</TableHead><TableHead>Activo</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>Servicio</TableHead><TableHead>Categoría</TableHead><TableHead>Inicio</TableHead><TableHead>Activo</TableHead><TableHead className="text-right">Acciones</TableHead></TableRow></TableHeader>
               <TableBody>
-                {services.length === 0 ? <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Sin servicios contratados</TableCell></TableRow>
-                : services.map((cs) => (
-                  <TableRow key={cs.id}>
-                    <TableCell>{cs.services?.name}</TableCell>
-                    <TableCell className="text-muted-foreground">{cs.services?.category}</TableCell>
-                    <TableCell className="text-muted-foreground">{new Date(cs.started_at).toLocaleDateString()}</TableCell>
-                    <TableCell>{cs.is_active ? "Sí" : "No"}</TableCell>
-                  </TableRow>
-                ))}
+                {services.length === 0 ? <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Sin servicios contratados</TableCell></TableRow>
+                : services.map((cs) => {
+                  const isBusinessFormation = cs.services?.name === "Business Formation & Structure";
+                  return (
+                    <TableRow key={cs.id}>
+                      <TableCell>{cs.services?.name}</TableCell>
+                      <TableCell className="text-muted-foreground">{cs.services?.category}</TableCell>
+                      <TableCell className="text-muted-foreground">{new Date(cs.started_at).toLocaleDateString()}</TableCell>
+                      <TableCell>{cs.is_active ? "Sí" : "No"}</TableCell>
+                      <TableCell className="text-right">
+                        {isBusinessFormation && cs.is_active && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openSendKitEmail(cs.id)}
+                          >
+                            <Send className="h-3.5 w-3.5" /> Send kit email
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </CardContent></Card>
@@ -714,6 +744,24 @@ const AdminClientDetail = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {emailDialogConfig && (
+        <SendTemplatedEmailDialog
+          open={emailDialogOpen}
+          onOpenChange={(open) => {
+            setEmailDialogOpen(open);
+            if (!open) setEmailDialogConfig(null);
+          }}
+          templateKey={emailDialogConfig.templateKey}
+          recipient={{ email: client.email, name: client.contact_name ?? client.company_name }}
+          variables={{
+            client_name: client.contact_name ?? client.company_name,
+            company_name: client.company_name,
+          }}
+          clientId={client.id}
+          clientServiceId={emailDialogConfig.clientServiceId}
+        />
+      )}
     </div>
   );
 };

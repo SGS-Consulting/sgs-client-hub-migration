@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       activity_log: {
@@ -54,8 +79,11 @@ export type Database = {
       }
       client_services: {
         Row: {
+          acknowledged_at: string | null
+          business_profile_data: Json | null
           client_id: string
           created_at: string
+          ghl_pipeline_stage: string | null
           id: string
           is_active: boolean
           notes: string | null
@@ -63,8 +91,11 @@ export type Database = {
           started_at: string
         }
         Insert: {
+          acknowledged_at?: string | null
+          business_profile_data?: Json | null
           client_id: string
           created_at?: string
+          ghl_pipeline_stage?: string | null
           id?: string
           is_active?: boolean
           notes?: string | null
@@ -72,8 +103,11 @@ export type Database = {
           started_at?: string
         }
         Update: {
+          acknowledged_at?: string | null
+          business_profile_data?: Json | null
           client_id?: string
           created_at?: string
+          ghl_pipeline_stage?: string | null
           id?: string
           is_active?: boolean
           notes?: string | null
@@ -165,37 +199,37 @@ export type Database = {
       }
       discovery_sessions: {
         Row: {
-          id: string
-          client_id: string
-          scheduled_at: string
-          duration_minutes: number
           attendees: string[]
-          outcome_notes: string | null
           calendly_event_id: string | null
-          created_by: string | null
+          client_id: string
           created_at: string
+          created_by: string | null
+          duration_minutes: number
+          id: string
+          outcome_notes: string | null
+          scheduled_at: string
         }
         Insert: {
-          id?: string
-          client_id: string
-          scheduled_at: string
-          duration_minutes?: number
           attendees?: string[]
-          outcome_notes?: string | null
           calendly_event_id?: string | null
-          created_by?: string | null
+          client_id: string
           created_at?: string
+          created_by?: string | null
+          duration_minutes?: number
+          id?: string
+          outcome_notes?: string | null
+          scheduled_at: string
         }
         Update: {
-          id?: string
-          client_id?: string
-          scheduled_at?: string
-          duration_minutes?: number
           attendees?: string[]
-          outcome_notes?: string | null
           calendly_event_id?: string | null
-          created_by?: string | null
+          client_id?: string
           created_at?: string
+          created_by?: string | null
+          duration_minutes?: number
+          id?: string
+          outcome_notes?: string | null
+          scheduled_at?: string
         }
         Relationships: [
           {
@@ -260,6 +294,170 @@ export type Database = {
           {
             foreignKeyName: "documents_client_id_fkey"
             columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_log: {
+        Row: {
+          body: string
+          client_id: string | null
+          client_service_id: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          provider_message_id: string | null
+          recipient_email: string
+          sent_at: string | null
+          sent_by: string | null
+          status: string
+          subject: string
+          template_key: string | null
+        }
+        Insert: {
+          body: string
+          client_id?: string | null
+          client_service_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          provider_message_id?: string | null
+          recipient_email: string
+          sent_at?: string | null
+          sent_by?: string | null
+          status?: string
+          subject: string
+          template_key?: string | null
+        }
+        Update: {
+          body?: string
+          client_id?: string | null
+          client_service_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          provider_message_id?: string | null
+          recipient_email?: string
+          sent_at?: string | null
+          sent_by?: string | null
+          status?: string
+          subject?: string
+          template_key?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_log_client_service_id_fkey"
+            columns: ["client_service_id"]
+            isOneToOne: false
+            referencedRelation: "client_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_templates: {
+        Row: {
+          body_html: string
+          body_variables: Json
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          subject: string
+          template_key: string
+          updated_at: string
+        }
+        Insert: {
+          body_html: string
+          body_variables?: Json
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          subject: string
+          template_key: string
+          updated_at?: string
+        }
+        Update: {
+          body_html?: string
+          body_variables?: Json
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          subject?: string
+          template_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      intake_submissions: {
+        Row: {
+          company_name: string | null
+          converted_client_id: string | null
+          created_at: string
+          email: string
+          explanation: string | null
+          first_name: string
+          id: string
+          incorporation_state: string | null
+          last_name: string
+          marketing_consent: boolean
+          non_marketing_consent: boolean
+          phone: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          services_of_interest: string[] | null
+          status: string
+        }
+        Insert: {
+          company_name?: string | null
+          converted_client_id?: string | null
+          created_at?: string
+          email: string
+          explanation?: string | null
+          first_name: string
+          id?: string
+          incorporation_state?: string | null
+          last_name: string
+          marketing_consent?: boolean
+          non_marketing_consent?: boolean
+          phone: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          services_of_interest?: string[] | null
+          status?: string
+        }
+        Update: {
+          company_name?: string | null
+          converted_client_id?: string | null
+          created_at?: string
+          email?: string
+          explanation?: string | null
+          first_name?: string
+          id?: string
+          incorporation_state?: string | null
+          last_name?: string
+          marketing_consent?: boolean
+          non_marketing_consent?: boolean
+          phone?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          services_of_interest?: string[] | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intake_submissions_converted_client_id_fkey"
+            columns: ["converted_client_id"]
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
@@ -357,78 +555,6 @@ export type Database = {
           {
             foreignKeyName: "invoices_client_id_fkey"
             columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      intake_submissions: {
-        Row: {
-          id: string
-          first_name: string
-          last_name: string
-          phone: string
-          email: string
-          company_name: string | null
-          incorporation_state: string | null
-          services_of_interest: string[]
-          explanation: string | null
-          non_marketing_consent: boolean
-          marketing_consent: boolean
-          status: string
-          reviewed_by: string | null
-          reviewed_at: string | null
-          converted_client_id: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          first_name: string
-          last_name: string
-          phone: string
-          email: string
-          company_name?: string | null
-          incorporation_state?: string | null
-          services_of_interest?: string[]
-          explanation?: string | null
-          non_marketing_consent?: boolean
-          marketing_consent?: boolean
-          status?: string
-          reviewed_by?: string | null
-          reviewed_at?: string | null
-          converted_client_id?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          first_name?: string
-          last_name?: string
-          phone?: string
-          email?: string
-          company_name?: string | null
-          incorporation_state?: string | null
-          services_of_interest?: string[]
-          explanation?: string | null
-          non_marketing_consent?: boolean
-          marketing_consent?: boolean
-          status?: string
-          reviewed_by?: string | null
-          reviewed_at?: string | null
-          converted_client_id?: string | null
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "intake_submissions_reviewed_by_fkey"
-            columns: ["reviewed_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "intake_submissions_converted_client_id_fkey"
-            columns: ["converted_client_id"]
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
@@ -536,6 +662,47 @@ export type Database = {
         }
         Relationships: []
       }
+      service_task_templates: {
+        Row: {
+          created_at: string
+          default_due_offset_days: number | null
+          default_priority: Database["public"]["Enums"]["task_priority"]
+          description: string | null
+          id: string
+          service_id: string
+          sort_order: number
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          default_due_offset_days?: number | null
+          default_priority?: Database["public"]["Enums"]["task_priority"]
+          description?: string | null
+          id?: string
+          service_id: string
+          sort_order?: number
+          title: string
+        }
+        Update: {
+          created_at?: string
+          default_due_offset_days?: number | null
+          default_priority?: Database["public"]["Enums"]["task_priority"]
+          description?: string | null
+          id?: string
+          service_id?: string
+          sort_order?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_task_templates_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       services: {
         Row: {
           base_price: number | null
@@ -568,47 +735,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
-      }
-      service_task_templates: {
-        Row: {
-          id: string
-          service_id: string
-          title: string
-          description: string | null
-          default_priority: Database["public"]["Enums"]["task_priority"]
-          default_due_offset_days: number | null
-          sort_order: number
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          service_id: string
-          title: string
-          description?: string | null
-          default_priority?: Database["public"]["Enums"]["task_priority"]
-          default_due_offset_days?: number | null
-          sort_order?: number
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          service_id?: string
-          title?: string
-          description?: string | null
-          default_priority?: Database["public"]["Enums"]["task_priority"]
-          default_due_offset_days?: number | null
-          sort_order?: number
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "service_task_templates_service_id_fkey"
-            columns: ["service_id"]
-            isOneToOne: false
-            referencedRelation: "services"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       subtasks: {
         Row: {
@@ -1057,8 +1183,11 @@ export type Database = {
         | "tax"
         | "financial"
         | "legal"
-        | "proposal"
         | "other"
+        | "proposal"
+        | "corporate_kit"
+        | "current_structure"
+        | "completion_certificate"
       document_status: "pending_review" | "approved" | "rejected"
       entity_type:
         | "LLC"
@@ -1205,6 +1334,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       app_role: ["admin", "client", "finance", "operations", "staff"],
@@ -1215,8 +1347,11 @@ export const Constants = {
         "tax",
         "financial",
         "legal",
-        "proposal",
         "other",
+        "proposal",
+        "corporate_kit",
+        "current_structure",
+        "completion_certificate",
       ],
       document_status: ["pending_review", "approved", "rejected"],
       entity_type: [
