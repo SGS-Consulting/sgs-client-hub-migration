@@ -223,6 +223,7 @@ Aim: each SOP slice ~1–3 sessions. If a slice balloons past that, peel out a s
 - [x] **2026-04-29** — Dev seed deployed (`supabase/seeds/dev_seed.sql`): test admin user (`admin@sgs.test` / `admin123!`), 8 standard services + Onboarding service, 4 sample clients, 5 SOP-00 task templates. SOP-00 vertical slice is now end-to-end testable.
 - [x] **2026-04-29** — `Processos_internos/` brought into the dashboard repo (option B in 3-way decision); SOPs and dashboard specs now versioned and reviewable by Karen via the same fork.
 - [x] **2026-04-29** — Phase 1b SOP-01 design **locked** with Abner (verbal sync). 15 of 17 design questions answered; Karen's 2 GHL questions pending but non-blocking. New pain point logged: SOP-01 structure-evaluation rationale isn't recorded anywhere (single point of failure on Abner).
+- [x] **2026-04-29** — **Session N+1 shipped:** SOP-01 schema migration (`20260429154331`) + idempotent seed (`Business Formation & Structure` service @ $500 + 6 task templates + 2 email templates). Real portal invite flow replacing the `/auth` URL stub: Edge Function `invite-portal-user` deployed, `/auth/callback` route + `AuthCallback` set-password page added, `AdminClientDetail` "Invite to portal" button now sends a real magic-link email via `supabase.auth.admin.inviteUserByEmail()`. Every send audited in `email_log`. Reusable across all future SOPs.
 
 ---
 
@@ -230,18 +231,15 @@ Aim: each SOP slice ~1–3 sessions. If a slice balloons past that, peel out a s
 
 **Phase 1b SOP-01 design is locked (2026-04-29).** See `sop01_design.md` — every Abner-side question answered; only Karen's GHL §7 still pending (doesn't block implementation).
 
-**Implementation order for the SOP-01 slice:**
-1. Migration: enum additions (`corporate_kit`, `current_structure`, `completion_certificate`), new fields (`acknowledged_at`, `ghl_pipeline_stage`), new tables (`business_profile`, `email_templates`, `email_log`).
-2. Seed: 6 SOP-01 task templates + update Business Formation service price to $500.
-3. **Proper portal invite flow** (carried over from SOP-00 polish — surfaced during 2026-04-29 smoke test).
-   - Smoke test discovered current "Invite to portal" button only copies `/auth`, which has no signup form (registration was removed in commit `623eb46`). New clients have no path to create an account.
-   - Build: Edge Function `invite-portal-user` that calls `supabase.auth.admin.inviteUserByEmail(client.email)` → Supabase sends magic-link email → client lands on "set password" page → `handle_new_user` trigger auto-links them to the client record (already in place).
-   - Reusable: every SOP needs this; building it inside SOP-01 slice is small, paid-once-used-everywhere.
-   - For email: start with Supabase's default email (free, no setup); migrate to Resend in step 5 once that's wired.
-4. Admin UI: SOP-01 service card with third-party tracking, kit/certificate upload, send-email dialog.
-5. Email infrastructure: Resend integration via Edge Function + first template seeded.
-6. Client UI: portal section for requested-docs / questionnaire / kit downloads / Acknowledge button.
-7. Smoke test end-to-end on dev Supabase.
+**Implementation progress (slice steps):**
+1. ✅ Migration: enum additions (`corporate_kit`, `current_structure`, `completion_certificate`), new fields (`acknowledged_at`, `ghl_pipeline_stage`, `business_profile_data`), new tables (`email_templates`, `email_log`).
+2. ✅ Seed: Business Formation & Structure service @ $500 + 6 task templates + 2 email templates.
+3. ✅ **Portal invite flow** — Edge Function deployed, `/auth/callback` route added, AdminClientDetail button calls real send.
+4. ⏭️ **Next:** Admin UI for SOP-01 — service card on `AdminClientDetail` with third-party tracking, kit/certificate upload, send-email dialog.
+5. Email send infrastructure: Resend integration via Edge Function (currently dashboard only LOGS to email_log; actual send for templated emails like sop01_kit_delivery still needs Resend wiring).
+6. PDF certificate generation (`@react-pdf/renderer`).
+7. Client UI: portal section for requested-docs / questionnaire / kit downloads / Acknowledge button.
+8. Smoke test end-to-end on dev Supabase.
 
 **Open scope question for Javi:** §6.2 (closure certificate) — recommended starting with **manual upload** (Abner fills a Word/PDF template and uploads); auto-PDF-generation deferred to v1.5 unless Abner pushes back. Confirm or override before implementation.
 
