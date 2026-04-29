@@ -20,6 +20,10 @@ dist-ssr
 # Supabase CLI local state (link metadata, cached versions, pooler URL)
 supabase/.temp/
 
+# Processos_internos: Claude-specific subfolders that shouldn't be versioned
+Processos_internos/memory/
+Processos_internos/visualize/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
