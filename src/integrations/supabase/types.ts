@@ -1164,6 +1164,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      acknowledge_client_service: { Args: { p_id: string }; Returns: string }
       current_client_id: { Args: never; Returns: string }
       has_role: {
         Args: {
