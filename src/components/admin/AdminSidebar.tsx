@@ -11,6 +11,7 @@ import {
   LogOut,
   FolderKanban,
   Inbox,
+  MessageCircle,
 } from "lucide-react";
 import {
   Sidebar,
@@ -40,6 +41,7 @@ const mainItems: Item[] = [
   { title: "Clientes", url: "/admin/clients", icon: Users, cap: "view:clients" },
   { title: "Documentos", url: "/admin/documents", icon: FileText, cap: "view:documents" },
   { title: "Facturas", url: "/admin/invoices", icon: Receipt, cap: "view:finance" },
+  { title: "Consultas", url: "/admin/queries", icon: MessageCircle, cap: "view:queries" },
 ];
 
 const opsItems: Item[] = [

@@ -18,6 +18,8 @@ export type Capability =
   | "manage:documents"
   | "view:services"
   | "manage:services"
+  | "view:queries"
+  | "manage:queries"
   | "view:team"
   | "manage:team"
   | "view:settings";
@@ -31,6 +33,7 @@ const RULES: Record<AppRole, Capability[]> = {
     "view:workspaces", "manage:workspaces",
     "view:documents", "manage:documents",
     "view:services", "manage:services",
+    "view:queries", "manage:queries",
     "view:team", "manage:team",
     "view:settings",
   ],
@@ -46,11 +49,13 @@ const RULES: Record<AppRole, Capability[]> = {
     "view:workspaces", "manage:workspaces",
     "view:documents", "manage:documents",
     "view:services",
+    "view:queries", "manage:queries",
   ],
   staff: [
     "view:dashboard",
     "view:tasks", // solo asignadas (RLS)
     "view:workspaces",
+    "view:queries", "manage:queries", // staff create queries during bookkeeping
   ],
   client: [],
 };

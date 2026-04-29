@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { LayoutDashboard, FileText, Receipt, Briefcase, User, LifeBuoy, LogOut, Menu } from "lucide-react";
+import { LayoutDashboard, FileText, Receipt, Briefcase, User, LifeBuoy, LogOut, Menu, MessageCircle } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ const items = [
   { title: "Documentos", url: "/portal/documents", icon: FileText },
   { title: "Facturas", url: "/portal/invoices", icon: Receipt },
   { title: "Servicios", url: "/portal/services", icon: Briefcase },
+  { title: "Preguntas", url: "/portal/queries", icon: MessageCircle },
   { title: "Soporte", url: "/portal/support", icon: LifeBuoy },
 ];
 

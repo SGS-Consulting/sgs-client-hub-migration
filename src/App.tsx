@@ -23,6 +23,7 @@ import AdminIntake from "./pages/admin/AdminIntake";
 import AdminIntakeDetail from "./pages/admin/AdminIntakeDetail";
 import AdminDocuments from "./pages/admin/AdminDocuments";
 import AdminInvoices from "./pages/admin/AdminInvoices";
+import AdminQueries from "./pages/admin/AdminQueries";
 import AdminServices from "./pages/admin/AdminServices";
 import AdminTeam from "./pages/admin/AdminTeam";
 import AdminSettings from "./pages/admin/AdminSettings";
@@ -34,6 +35,7 @@ import ClientDocuments from "./pages/client/ClientDocuments";
 import ClientInvoices from "./pages/client/ClientInvoices";
 import ClientServices from "./pages/client/ClientServices";
 import ClientSupport from "./pages/client/ClientSupport";
+import ClientQueries from "./pages/client/ClientQueries";
 
 const queryClient = new QueryClient();
 
@@ -82,6 +84,9 @@ const App = () => (
               <Route path="invoices" element={
                 <ProtectedRoute requireArea="internal" requireCap="view:finance"><AdminInvoices /></ProtectedRoute>
               } />
+              <Route path="queries" element={
+                <ProtectedRoute requireArea="internal" requireCap="view:queries"><AdminQueries /></ProtectedRoute>
+              } />
               <Route path="services" element={
                 <ProtectedRoute requireArea="internal" requireCap="view:services"><AdminServices /></ProtectedRoute>
               } />
@@ -102,6 +107,7 @@ const App = () => (
               <Route path="documents" element={<ClientDocuments />} />
               <Route path="invoices" element={<ClientInvoices />} />
               <Route path="services" element={<ClientServices />} />
+              <Route path="queries" element={<ClientQueries />} />
               <Route path="support" element={<ClientSupport />} />
             </Route>
 
