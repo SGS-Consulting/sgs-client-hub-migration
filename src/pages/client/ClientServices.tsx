@@ -291,6 +291,21 @@ const ClientServices = () => {
         : { label: "Activo", tone: "active" as const }
       : { label: "Cerrado", tone: "closed" as const };
 
+    // Section title adapts to the per-client tax-firm cadence Germain set.
+    const reportSectionTitle =
+      cs.tax_firm_cadence === "semi_annual"
+        ? "Reportes semestrales"
+        : cs.tax_firm_cadence === "tax_season_only"
+          ? "Reporte de temporada de impuestos"
+          : "Reportes trimestrales";
+
+    const reportEmptyText =
+      cs.tax_firm_cadence === "semi_annual"
+        ? "Tus reportes semestrales de pérdidas y ganancias aparecerán acá cuando estén listos."
+        : cs.tax_firm_cadence === "tax_season_only"
+          ? "Tu reporte anual aparecerá acá cuando esté listo."
+          : "Tus reportes trimestrales de pérdidas y ganancias aparecerán acá cuando estén listos.";
+
     return (
       <Card key={cs.id} className="border-primary/50 md:col-span-2">
         <CardHeader>
@@ -338,10 +353,10 @@ const ClientServices = () => {
             </Link>
           )}
 
-          {/* Quarterly reports */}
+          {/* Periodic reports — heading adapts to cadence */}
           <div className="space-y-2">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Reportes trimestrales
+              {reportSectionTitle}
             </h3>
             {reports.length > 0 ? (
               <ul className="space-y-1">
@@ -373,9 +388,7 @@ const ClientServices = () => {
                 ))}
               </ul>
             ) : (
-              <p className="text-xs text-muted-foreground">
-                Tus reportes trimestrales de pérdidas y ganancias aparecerán acá cuando estén listos.
-              </p>
+              <p className="text-xs text-muted-foreground">{reportEmptyText}</p>
             )}
           </div>
 
