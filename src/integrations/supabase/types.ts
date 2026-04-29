@@ -77,6 +77,82 @@ export type Database = {
           },
         ]
       }
+      client_queries: {
+        Row: {
+          client_id: string
+          client_service_id: string | null
+          context: string | null
+          created_at: string
+          created_by: string | null
+          due_date: string
+          id: string
+          owner_id: string | null
+          question: string
+          responded_at: string | null
+          responded_by: string | null
+          response: string | null
+          response_attachment_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          client_service_id?: string | null
+          context?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_date: string
+          id?: string
+          owner_id?: string | null
+          question: string
+          responded_at?: string | null
+          responded_by?: string | null
+          response?: string | null
+          response_attachment_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          client_service_id?: string | null
+          context?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_date?: string
+          id?: string
+          owner_id?: string | null
+          question?: string
+          responded_at?: string | null
+          responded_by?: string | null
+          response?: string | null
+          response_attachment_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_queries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_queries_client_service_id_fkey"
+            columns: ["client_service_id"]
+            isOneToOne: false
+            referencedRelation: "client_services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_queries_response_attachment_id_fkey"
+            columns: ["response_attachment_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_services: {
         Row: {
           acknowledged_at: string | null
@@ -87,8 +163,10 @@ export type Database = {
           id: string
           is_active: boolean
           notes: string | null
+          qb_configured_at: string | null
           service_id: string
           started_at: string
+          tax_firm_cadence: string | null
         }
         Insert: {
           acknowledged_at?: string | null
@@ -99,8 +177,10 @@ export type Database = {
           id?: string
           is_active?: boolean
           notes?: string | null
+          qb_configured_at?: string | null
           service_id: string
           started_at?: string
+          tax_firm_cadence?: string | null
         }
         Update: {
           acknowledged_at?: string | null
@@ -111,8 +191,10 @@ export type Database = {
           id?: string
           is_active?: boolean
           notes?: string | null
+          qb_configured_at?: string | null
           service_id?: string
           started_at?: string
+          tax_firm_cadence?: string | null
         }
         Relationships: [
           {
@@ -206,6 +288,7 @@ export type Database = {
           created_by: string | null
           duration_minutes: number
           id: string
+          kind: string
           outcome_notes: string | null
           scheduled_at: string
         }
@@ -217,6 +300,7 @@ export type Database = {
           created_by?: string | null
           duration_minutes?: number
           id?: string
+          kind?: string
           outcome_notes?: string | null
           scheduled_at: string
         }
@@ -228,6 +312,7 @@ export type Database = {
           created_by?: string | null
           duration_minutes?: number
           id?: string
+          kind?: string
           outcome_notes?: string | null
           scheduled_at?: string
         }
@@ -661,6 +746,59 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      service_recurring_tasks: {
+        Row: {
+          cadence: string
+          cadence_config: Json
+          created_at: string
+          default_due_offset_days: number
+          default_priority: Database["public"]["Enums"]["task_priority"]
+          description: string | null
+          id: string
+          is_active: boolean
+          read_per_client_setting: string | null
+          service_id: string
+          sort_order: number
+          title: string
+        }
+        Insert: {
+          cadence: string
+          cadence_config?: Json
+          created_at?: string
+          default_due_offset_days?: number
+          default_priority?: Database["public"]["Enums"]["task_priority"]
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          read_per_client_setting?: string | null
+          service_id: string
+          sort_order?: number
+          title: string
+        }
+        Update: {
+          cadence?: string
+          cadence_config?: Json
+          created_at?: string
+          default_due_offset_days?: number
+          default_priority?: Database["public"]["Enums"]["task_priority"]
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          read_per_client_setting?: string | null
+          service_id?: string
+          sort_order?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_recurring_tasks_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       service_task_templates: {
         Row: {
@@ -1165,6 +1303,10 @@ export type Database = {
     }
     Functions: {
       acknowledge_client_service: { Args: { p_id: string }; Returns: string }
+      answer_client_query: {
+        Args: { p_attachment_id?: string; p_id: string; p_response: string }
+        Returns: string
+      }
       current_client_id: { Args: never; Returns: string }
       has_role: {
         Args: {
@@ -1189,6 +1331,9 @@ export type Database = {
         | "corporate_kit"
         | "current_structure"
         | "completion_certificate"
+        | "quarterly_report"
+        | "annual_iul_review"
+        | "tax_prep_package"
       document_status: "pending_review" | "approved" | "rejected"
       entity_type:
         | "LLC"
@@ -1353,6 +1498,9 @@ export const Constants = {
         "corporate_kit",
         "current_structure",
         "completion_certificate",
+        "quarterly_report",
+        "annual_iul_review",
+        "tax_prep_package",
       ],
       document_status: ["pending_review", "approved", "rejected"],
       entity_type: [
