@@ -225,12 +225,39 @@ Aim: each SOP slice ~1–3 sessions. If a slice balloons past that, peel out a s
 - [x] **2026-04-29** — `Processos_internos/` brought into the dashboard repo (option B in 3-way decision); SOPs and dashboard specs now versioned and reviewable by Karen via the same fork.
 - [x] **2026-04-29** — Phase 1b SOP-01 design **locked** with Abner (verbal sync). 15 of 17 design questions answered; Karen's 2 GHL questions pending but non-blocking. New pain point logged: SOP-01 structure-evaluation rationale isn't recorded anywhere (single point of failure on Abner).
 - [x] **2026-04-29** — **Session N+1 shipped:** SOP-01 schema migration (`20260429154331`) + idempotent seed (`Business Formation & Structure` service @ $500 + 6 task templates + 2 email templates). Real portal invite flow replacing the `/auth` URL stub: Edge Function `invite-portal-user` deployed, `/auth/callback` route + `AuthCallback` set-password page added, `AdminClientDetail` "Invite to portal" button now sends a real magic-link email via `supabase.auth.admin.inviteUserByEmail()`. Every send audited in `email_log`. Reusable across all future SOPs.
+- [x] **2026-04-29** — **Session N+2 shipped:** Reusable `SendTemplatedEmailDialog` (loads any `email_templates` row, substitutes `{{variable}}` placeholders, lets admin edit, writes to `email_log`). Wired into Services tab for SOP-01 kit-delivery emails. Document-category dropdown extended to include the SOP-01 categories (corporate_kit, current_structure, completion_certificate).
+- [x] **2026-04-29** — **Session N+3a shipped:** Client portal SOP-01 panel — kit + certificate downloads (signed-URL Storage), "Acknowledge & close" with confirm dialog, `acknowledge_client_service(p_id)` SECURITY DEFINER RPC (migration `20260429182958`). Document-category dropdown bug fix.
+- [x] **2026-04-29** — **Architectural decision (Karen):** email dispatch is GoHighLevel's job, not a separate service (Resend/SMTP). Dashboard composes + queues to `email_log`; GHL picks up `pending` rows during Phase 2 GHL bridge work. Captured in `feedback_email_via_ghl` Claude memory + `roadmap.md` Phase 2 deliverables.
+- [x] **2026-04-29** — **SOP-01 v1 functionally complete** except PDF certificate auto-gen (waiting on Abner's signature image — can ship brand-only as interim) and end-to-end smoke test. Slice was 4 sessions (N+1 through N+3a) plus design.
 
 ---
 
 ## Next concrete step
 
-**Phase 1b SOP-01 design is locked (2026-04-29).** See `sop01_design.md` — every Abner-side question answered; only Karen's GHL §7 still pending (doesn't block implementation).
+**SOP-03 (Managed Accounting) design phase active.** `sop03_design.md` drafted 2026-04-29 — first **recurring service** in the project, introduces dashboard mechanics (recurring task spawning, client-query workflow, monthly meeting cadence, quarterly reports) that will be reused by SOP-04 and SOP-07.
+
+**Action:** Javi takes `sop03_design.md` to **Germain** for answers. Karen's §10 (GHL) can be answered separately.
+
+Headline open questions worth highlighting to Germain:
+- §2.1 — Required document checklist vs. free-form upload?
+- §3.1 — QuickBooks integration in v1 (no, just status-tracked) or later?
+- §5.x — Client-query workflow shape (the Step 3.1 daily-comms machinery — biggest new infrastructure)
+- §7.1 — Auto-spawning October P&L task each year?
+- §8.1 — Frequency of tax-prep firm handoff (existing open question from `_meetings/open_questions.md`)
+- §11 — Pricing confirmation ($5,000/month standard, billing cadence)
+
+Once Germain's answers are captured into `sop03_design.md`'s Decision log, implementation starts. Estimated 4–6 sessions for SOP-03 because it adds recurring-task infrastructure on top of the SOP-specific UI.
+
+**Backlog from SOP-01 (deferred, not blocking SOP-03):**
+- PDF completion certificate auto-gen (need Abner's signature, OR ship brand-only as interim)
+- SOP-01 end-to-end smoke test on dev Supabase
+- Hosting / deployment (pending Karen's call on subdomain + CNAME setup)
+
+---
+
+## Phase 1b SOP-01 design (LOCKED 2026-04-29)
+
+See `sop01_design.md` — every Abner-side question answered; only Karen's GHL §7 still pending (doesn't block implementation).
 
 **Implementation progress (slice steps):**
 1. ✅ Migration: enum additions (`corporate_kit`, `current_structure`, `completion_certificate`), new fields (`acknowledged_at`, `ghl_pipeline_stage`, `business_profile_data`), new tables (`email_templates`, `email_log`).
