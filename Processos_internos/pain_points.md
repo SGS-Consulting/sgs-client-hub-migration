@@ -59,6 +59,13 @@ Registro vivo de puntos de fricción identificados en los procesos internos de S
 - **Detectado:** 2026-04-26
 - **Estado:** abierto
 
+### [SOP-03 / SOP-04] Frontera ambigua entre "tax-season-only" de SOP-03 y "one-time tax filing" de SOP-04
+- **Observación:** En la sesión de diseño del dashboard con Germain (2026-04-29) emergió que SOP-03 tiene un modo "cliente único de temporada de impuestos" — clientes que sólo contratan a SGS para que les ordenen los libros y presenten impuestos una vez. Por otro lado, SOP-04 (Tax & Compliance Strategy) explícitamente documenta una variante "one-time tax filing" para clientes con vencimientos de impuestos. **Ambos servicios describen el mismo escenario operativo** desde ángulos diferentes — un cliente que sólo viene en temporada de impuestos para libros + presentación. No queda claro: ¿es SOP-03 (con bookkeeping incluido) o SOP-04 (con tax filing como output)? ¿Es uno solo o dos servicios distintos? ¿Cómo se cobran (un solo cargo único vs. dos cargos)?
+- **Severidad:** alta
+- **Mejora sugerida:** (1) Reunión corta entre Germain y Abner para alinear: ¿quién dueño es de este flujo? ¿Cómo se contrata, cobra y ejecuta? (2) Una vez decidido, actualizar el SOP correspondiente para incluir el flujo "tax-season-only" como una variante explícita y eliminar la ambigüedad. (3) En el dashboard, esto determina si "Tax-Season Bookkeeping" es un service propio (separado de "Managed Accounting") o si vive en SOP-04. Implementación bloqueada hasta resolver.
+- **Detectado:** 2026-04-29
+- **Estado:** abierto
+
 ### [SOP-01] La evaluación de estructura no queda registrada
 - **Observación:** En el Paso 2 de SOP-01, Abner evalúa la estructura actual del cliente y diseña la nueva — pero esta evaluación se hace mentalmente y no se registra en ningún sistema (confirmado en sesión de diseño 2026-04-29 al levantar requisitos del dashboard). La justificación de "por qué esta estructura es la correcta para este cliente" se pierde al cerrar el servicio. Si en el futuro un miembro del equipo (Germain, Karen, o un sucesor de Abner) necesita revisar la decisión, no hay traza.
 - **Severidad:** alta

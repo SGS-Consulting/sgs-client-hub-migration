@@ -1,22 +1,42 @@
 # SOP-03 Managed Accounting & Financial Operations — Dashboard Design
 
-**Status:** Drafting questions for **Germain**. **No code yet** — implementation starts after answers are captured below. Karen still needs to answer §10 (GHL).
+**Status:** Design **LOCKED** as of 2026-04-29 with Germain. Karen still needed for §10 (GHL). Specific pricing tier numbers TBD with Germain.
 **Reference:** `Processos_internos/03_contabilidad_operaciones/sop.md`
 **Pipeline (GHL):** `Managed Accounting & Financial Operations`
 **Last updated:** 2026-04-29
 
 ---
 
+## Quick reference — what we're building
+
+| Area | Decision |
+|------|----------|
+| Activation | Two paths: from SOP-00 onboarding, or as upsell on existing client |
+| Billing | Auto-invoice on activation; client must pay before first month starts |
+| Step 1 docs | Free-form upload (no checklist); admin can upload on behalf |
+| QuickBooks | Status-only in v1 — checkbox on SOP-03 card; no QB API integration yet |
+| Bookkeeping visibility | Internal only — no metrics surfaced in admin |
+| Client queries | Quick-create button anywhere in dashboard; client responds via portal widget + page |
+| Overdue queries | Auto-reminder email at +3 business days past due (via GHL once Phase 2 ships) |
+| Query ownership | Creator owns follow-up; Germain has master "all queries" view |
+| Query notification | Email + in-portal notification (email via GHL) |
+| Monthly meeting | **Calendly fully integrated** — webhook auto-creates meeting row |
+| Meeting notes | Dashboard is source of truth (synced to GHL in Phase 2) |
+| Quarterly report | Manual upload (v1); auto-gen waits on QB API integration later |
+| Quarterly status | Status indicator on SOP-03 service card |
+| October P&L | **Auto-spawned task** on October 1 each year — first recurring-task mechanic |
+| Tax firm cadence | **Per-client** — quarterly OR semi-annual based on client's tax filing pattern; **plus a tax-season trigger** for one-time service clients |
+| Recurring task collision | New spawns regardless; prior stays open with overdue badge |
+| Pricing | Tiered by # of companies managed; **plus single-service charge** for tax-season-only clients (boundary with SOP-04 one-time flagged as pain point) |
+
+---
+
 ## How to use this doc
 
-1. Javi reviews questions and the recommended defaults.
-2. Javi takes them to **Germain** (sole runner of SOP-03; Abner is involved only in October P&L recommendations).
-3. Each answer captured inline below + in the Decision log at the bottom.
-4. Once every "OPEN" item is "ANSWERED" (excluding Karen's §10), implementation starts.
-
-Same format as `sop01_design.md`: each item has a **default proposal** + **what we'd build if confirmed** + **what changes if not.**
-
-**Major architectural note:** SOP-03 is the **first recurring service** we're building. It introduces dashboard mechanics we don't yet have: monthly task spawning, cadence-aware status, periodic deliverables (monthly notes, quarterly reports, October P&L). These mechanics will be reused by SOP-04 (tax) and SOP-07 (advisory) later — building them well here pays dividends across SOPs.
+1. ✅ Javi takes questions to Germain (verbal sync 2026-04-29 — done).
+2. ✅ Answers captured below + in Decision log at the bottom.
+3. ⏳ Karen still needed for §10 (GHL) and pricing tier numbers TBD with Germain.
+4. ⚠️ Pain point logged about the SOP-03/SOP-04 one-time-tax-service boundary — needs cross-SOP clarification before we build the second tax-season variant.
 
 ---
 
@@ -24,313 +44,403 @@ Same format as `sop01_design.md`: each item has a **default proposal** + **what 
 
 ### 1.1 How does Germain know a client wants SOP-03?
 
-**Default proposal:** Three paths supported, all admin-initiated:
-- **(a) From onboarding (SOP-00):** during the discovery session, if the client signs the bookkeeping package, Abner (or Germain) activates "Managed Accounting" in `AdminClientDetail → Services`.
-- **(b) Existing-client upsell:** an active client signs up for accounting later → Germain (or Abner) activates the service.
-- **(c) Migration:** a client already in QuickBooks under SGS gets imported and the service activated retroactively.
+**Decision:** **C — both paths supported.**
 
-**Build implication:** Reuses existing service-activation flow; no new UI for activation itself.
+**Build implication:** Reuses existing service-activation flow; no new UI for activation itself. Same flow Abner uses for SOP-01.
 
-**Status:** OPEN
+**Status:** ✅ ANSWERED — Germain, 2026-04-29
 
-### 1.2 Does activation always trigger a real billing event?
+### 1.2 Auto-billing on activation?
 
-**Default proposal:** Yes — recurring services are $5,000/month per `Processos_internos/CLAUDE.md` pricing model. Activation auto-generates the first month's invoice (status: `sent`) and sets the next invoice date.
+**Decision:** **A — auto-invoice $5,000 on activation; client must pay before first month starts.**
 
-**Status:** OPEN — confirm $5,000 is the standard or if there are tiers / per-revenue pricing.
+**Build implication:**
+- On service activation, auto-create an invoice (status: `sent`) with first month's line item.
+- The "Configure QuickBooks" task (or the activation itself) is **gated** — admin cannot proceed past Step 1 until invoice is paid.
+- For tiered pricing (see §11), the invoice amount comes from the tier Germain selects at activation.
+
+**Status:** ✅ ANSWERED — Germain, 2026-04-29
 
 ---
 
 ## 2. Step 1 — Financial document collection
 
-### 2.1 What documents are required to start?
+### 2.1 Required-checklist or free-form upload?
 
-**Default proposal:** Required-vs-optional checklist surfaced in the client portal:
-- **Required:** bank statements (last 3 months), prior-year tax return, list of bank accounts the client wants connected to QuickBooks
-- **Recommended:** payroll records, supplier contracts, prior bookkeeping (if any), recent invoices issued
-- **Optional / case-by-case:** loan agreements, lease contracts, other industry-specific docs
+**Decision:** **B — free-form upload.** Same pattern as SOP-01 (no rigid checklist).
 
-Client uploads via portal. Each item in the checklist tracks "received / not received" so Germain's team can see at a glance who's missing what.
+**Build implication:** No new tables; reuses existing `documents` upload flow. Admin requests "send your financial documents" through the dashboard; client uploads whatever they have.
 
-**Build implication:** New `service_document_requirements` table (or JSON column on `client_services`) listing required document types per service. UI shows a checklist on the client portal.
+**Status:** ✅ ANSWERED — Germain, 2026-04-29
 
-**If different (e.g., Germain prefers free-form upload like SOP-01):** drop the checklist; just give them a "Upload financial documents" prompt.
+### 2.2 Admin upload on behalf?
 
-**Status:** OPEN
+**Decision:** **A — admin can upload, attribution stays with client.**
 
-### 2.2 Does Germain ever need to upload documents for the client (e.g., he gets them from Abner directly, or from migration)?
+**Build implication:** Existing `documents.uploaded_by` field already tracks this; no schema change. The document still belongs to the client (`client_id`), `uploaded_by` records who put it there.
 
-**Default proposal:** Yes — admin can upload on behalf of the client. The document still belongs to the client, just uploaded_by tracks who put it there.
-
-**Status:** OPEN
+**Status:** ✅ ANSWERED — Germain, 2026-04-29
 
 ---
 
 ## 3. Step 2 — QuickBooks setup
 
-### 3.1 Does the dashboard integrate with QuickBooks (API), or just track status manually?
+### 3.1 QB integration in v1?
 
-**Default proposal (v1):** Status only — Germain manually flips a "QuickBooks configured" checkbox on the SOP-03 service card after he's done the actual QB setup outside the dashboard. We DO NOT integrate the QB API in v1.
+**Decision:** **A — status only.** Germain manually flips a "QuickBooks configured" checkbox on the SOP-03 service card. No QB API integration in v1.
 
-**Why:** QB integration is a real product (OAuth + ongoing sync + maintenance). Worth doing eventually — adds value like surfacing live cash balance to clients — but it's a 1–2 week investment. Better to ship the rest of SOP-03 first and add QB integration as a Phase 2 enhancement.
+**Build implication:** Add a `qb_configured_at TIMESTAMPTZ` field on `client_services` (or generic `metadata` JSONB if we expect more service-specific flags later). Admin UI shows a checkbox + date when it was set.
 
-**If different (Germain wants live QB data in dashboard right now):** scope expands significantly; likely splits into its own slice.
+**Status:** ✅ ANSWERED — Germain, 2026-04-29
 
-**Status:** OPEN — confirm v1 status-only is fine.
+### 3.2 Client-visible info about QB?
 
-### 3.2 What client-visible info should the dashboard surface during/after QB setup?
+**Decision:** **C — nothing client-visible about QB.** Client just sees the SOP-03 service is active; QB is internal.
 
-**Default proposal:**
-- During setup (Germain's working on it): "QuickBooks setup in progress — your team will reach out for credentials."
-- After setup: "QuickBooks active. View your books at quickbooks.intuit.com" (link to QB; no embedded view in v1).
+**Build implication:** No QB section on the client portal.
 
-**Status:** OPEN
+**Status:** ✅ ANSWERED — Germain, 2026-04-29
 
 ---
 
 ## 4. Step 3 — Ongoing bookkeeping (internal)
 
-### 4.1 Does the bookkeeping work itself need to surface in the dashboard?
+### 4.1 Bookkeeping volume metrics in admin?
 
-**Default proposal:** No — bookkeeping is internal team work. The dashboard just shows the SOP-03 service as "active," and the client mostly cares about Step 3.1 (queries to them) and Step 4 (meetings/reports).
+**Decision:** **A — no, no metrics.**
 
-**If different (Germain wants bookkeeping volume / status visible to admin):** add a simple admin-side metric card: "X transactions categorized this week, Y pending categorization."
+**Build implication:** None. Bookkeeping is internal team work.
 
-**Status:** OPEN
+**Status:** ✅ ANSWERED — Germain, 2026-04-29
 
 ---
 
-## 5. Step 3.1 — Day-to-day client query workflow
-
-This is the most operationally critical and friction-prone step of SOP-03. Currently lives in GHL; needs to live in the dashboard so clients can respond quickly.
+## 5. Step 3.1 — Client query workflow
 
 ### 5.1 How is a query created?
 
-**Default proposal:** Germain's team sees an uncategorized transaction in QuickBooks → opens the client's profile in the dashboard → clicks **"New query"** → fills in:
-- Question / context (e.g., "Transaction on 2026-04-15 for $432 — what was this for?")
-- Optional: link to specific document or transaction reference
-- Due date for client response (default: +3 business days)
+**Decision:** **B — quick-create button from anywhere in the dashboard.**
 
-This creates a `client_queries` row visible to the client in their portal.
+**Build implication:**
+- Global "Ask client" button in the admin layout (header or floating action)
+- Click opens a dialog: pick client, type question, optional document/transaction reference, due date (default +3 business days)
+- Saves to new `client_queries` table
 
-**Build implication:** New `client_queries` table with: `id, client_id, client_service_id, question, context, due_date, status (open/answered/overdue), created_by, response, responded_at, created_at`. RLS: admins manage; clients view + answer their own.
+**Schema:**
+```
+client_queries (
+  id UUID PK,
+  client_id UUID FK,
+  client_service_id UUID FK NULL,  -- which service the query relates to (optional)
+  question TEXT NOT NULL,
+  context TEXT,                      -- optional reference (transaction, doc, etc.)
+  due_date DATE NOT NULL,
+  status TEXT ('open', 'answered', 'overdue'),
+  response TEXT,
+  responded_at TIMESTAMPTZ,
+  responded_by UUID FK auth.users NULL,
+  created_by UUID FK auth.users,     -- which team member asked
+  owner_id UUID FK auth.users,       -- who's responsible for follow-up; defaults to created_by
+  created_at TIMESTAMPTZ
+)
+```
 
-**Status:** OPEN
+**Status:** ✅ ANSWERED — Germain, 2026-04-29
 
 ### 5.2 How does the client respond?
 
-**Default proposal:** Client portal has a "Pending Questions" surface (dashboard widget + dedicated page). For each query, client sees the question, can type a response, optionally attach a document, hit Submit. Response saves; status flips to `answered`.
+**Decision:** **A — pending-questions widget on `/portal` dashboard + dedicated `/portal/queries` page.**
 
-**Build implication:** Client-side `ClientQueries.tsx` page + dashboard widget. RPC `answer_client_query(p_id, p_response, p_attachment_id?)` similar to the SOP-01 acknowledge pattern.
+**Build implication:**
+- New `ClientQueries.tsx` page listing all queries for the logged-in client.
+- New widget on `ClientDashboard.tsx` summarizing open queries.
+- "Answer" form per query: text response + optional attachment.
+- RPC `answer_client_query(p_id, p_response, p_attachment_id?)` (SECURITY DEFINER, similar to acknowledge_client_service).
 
-**Status:** OPEN
+**Status:** ✅ ANSWERED — Germain, 2026-04-29
 
-### 5.3 What happens when a query is overdue?
+### 5.3 Overdue handling?
 
-**Default proposal:** Past due_date and still `open` → status becomes `overdue` (computed, or via a daily job). Client sees a red badge on the query. Germain's team gets a daily summary.
+**Decision:** **C — aggressive auto-reminder email at +3 business days past due.**
 
-**Build implication:** A scheduled function (Supabase pg_cron or Edge Function on a schedule) that flips overdue queries every morning and optionally posts a summary somewhere.
+**Build implication:**
+- A scheduled function (Supabase pg_cron daily) checks `client_queries WHERE status='open' AND due_date < now() - '3 business days'`.
+- For each, flips status to `overdue` AND inserts an `email_log` row (status `pending`, template `query_overdue_reminder`) targeting the client.
+- GHL picks up `email_log` pending rows and dispatches.
+- Admin sees "Overdue queries" filter on the queries admin page.
 
-**If simpler v1:** no automated overdue flip; admin manually flags queries that have been ignored for too long.
+**New email template** to seed: `query_overdue_reminder`.
 
-**Status:** OPEN
+**Status:** ✅ ANSWERED — Germain, 2026-04-29
 
-### 5.4 Does the team manage queries individually, or does Germain see them all?
+### 5.4 Who manages the queue?
 
-**Default proposal:** Germain has an admin-side "All Queries" page filtered by client / status / overdue. Each query has a created_by (the team member who asked) but Germain manages the queue.
+**Decision:** **A — creator owns follow-up; Germain has master view.**
 
-**Status:** OPEN
+**Build implication:**
+- `client_queries.owner_id` defaults to the team member who created the query.
+- Admin queries page has filters: All / Mine / Overdue / By client.
+- Germain (or any admin) can view all queries.
+
+**Status:** ✅ ANSWERED — Germain, 2026-04-29
+
+### 5.5 Notify client on new query?
+
+**Decision:** **A — email + in-portal notification.** Email routes via GHL (Phase 2).
+
+**Build implication:**
+- New email template `client_query_new` seeded.
+- On query creation, insert a `notifications` row + an `email_log` row (status `pending`).
+- In-portal notification surfaces immediately (uses existing notifications table).
+
+**Status:** ✅ ANSWERED — Germain, 2026-04-29
 
 ---
 
 ## 6. Step 4 — Monthly meeting + quarterly report
 
-### 6.1 How is the monthly meeting scheduled?
+### 6.1 Meeting scheduling?
 
-**Default proposal (v1):** Manual scheduling via Calendly link (same pattern as SOP-00 discovery sessions). Germain sends client his Calendly link from the dashboard; once booked, the meeting is logged manually as a `discovery_sessions` row (we may rename to `client_meetings` to be more general).
+**Decision:** **C — Calendly fully integrated** via webhook.
 
-**v1.5 path:** Auto-create the next monthly meeting in the dashboard when the prior one is logged, so there's always a "next meeting" placeholder.
+**Build implication (significant — new infrastructure, but reusable):**
+- Each Germain-side admin (or a shared SOP-03 mailbox) gets a Calendly event type.
+- Configure Calendly webhook to POST `invitee.created` to a new Edge Function `calendly-webhook`.
+- Edge Function maps the event to a client (via the invitee's email matching `clients.email`) and creates a `client_meetings` row (we may rename `discovery_sessions` → `client_meetings` since it's now reused beyond SOP-00).
+- Reusable for all SOPs with client meetings (SOP-00 discovery, SOP-03 monthly, SOP-07 advisory check-ins).
 
-**Status:** OPEN
+**Status:** ✅ ANSWERED — Germain, 2026-04-29 — adds ~1 session of work but unblocks self-scheduling everywhere.
 
-### 6.2 Are meeting notes captured in the dashboard or just in GHL?
+### 6.2 Meeting notes location?
 
-**Default proposal:** Both — meeting notes captured in the dashboard (rich text or markdown field), then synced to GHL when Phase 2 GHL bridge ships. Until then, dashboard is source of truth and Germain manually mirrors to GHL if needed.
+**Decision:** **A — dashboard is source of truth.** GHL gets a synced copy in Phase 2.
 
-**Status:** OPEN
+**Build implication:** Existing `discovery_sessions.outcome_notes` field works; just renamed to a generic table.
 
-### 6.3 The quarterly report — does the dashboard generate it, or does Germain upload a manual report?
+**Status:** ✅ ANSWERED — Germain, 2026-04-29
 
-**Default proposal (v1):** Germain produces the quarterly P&L report outside the dashboard (in QuickBooks or Excel) and uploads it as a `documents` row with new category `quarterly_report`. Client downloads from portal.
+### 6.3 Quarterly report?
 
-**v1.5 path:** Auto-pull live P&L data from QuickBooks API and render the report in the dashboard.
+**Decision:** **A — manual upload (v1).** Germain produces in QuickBooks/Excel, uploads as a `documents` row with new category `quarterly_report`. Auto-generation deferred until QB integration is built.
 
-**Status:** OPEN
+**Build implication:** New document category `quarterly_report` in the enum.
 
-### 6.4 How does the client see "next quarterly report due in X"?
+**Status:** ✅ ANSWERED — Germain, 2026-04-29
 
-**Default proposal:** A simple status indicator on the SOP-03 service card: "Next quarterly review: [date]" updated quarterly.
+### 6.4 "Next quarterly review" indicator?
 
-**Status:** OPEN
+**Decision:** **A — status indicator on the SOP-03 service card.**
+
+**Build implication:** Compute "next quarter end + reporting buffer" from `client_services.started_at` or a fixed schedule. Display on the SOP-03 card both admin- and client-side.
+
+**Status:** ✅ ANSWERED — Germain, 2026-04-29
 
 ---
 
-## 7. Step 4.1 — October P&L analysis (annual)
+## 7. Step 4.1 — October P&L analysis
 
-### 7.1 Should the dashboard auto-create this task each year?
+### 7.1 Auto-create the task each year?
 
-**Default proposal:** Yes — the SOP-03 service has a recurring annual task that auto-spawns each October 1st: "October P&L analysis + IUL contribution recommendation." Assigned to Germain by default. Has a target completion date of October 31st.
+**Decision:** **A — yes, auto-spawn on Oct 1.**
 
-**Build implication:** Recurring task scheduling — `service_recurring_tasks` table or similar that defines tasks that auto-spawn on a cadence (monthly, quarterly, annually). This is a **reusable mechanic** for SOP-04 (tax cadences), SOP-07 (advisory check-ins).
+**Build implication:** First use of the recurring-task mechanic (see §9). The SOP-03 service has a recurring annual task: "October P&L analysis + IUL recommendation," due Oct 31, assigned to Germain.
 
-**Status:** OPEN
+**Status:** ✅ ANSWERED — Germain, 2026-04-29
 
-### 7.2 Does the IUL recommendation produce a specific artifact?
+### 7.2 Specific artifact for the IUL recommendation?
 
-**Default proposal:** Yes — Germain uploads a "P&L analysis + IUL recommendation" document to the client's portal, category `annual_iul_review`. Optional: a simple yes/no field on the task ("Recommended IUL contribution? Y/N + amount") so admin views can aggregate across clients.
+**Default proposal (no explicit answer received — defaulting):** Yes — Germain uploads a "P&L analysis + IUL recommendation" document to the client's portal with new category `annual_iul_review`. Optional: a yes/no field on the task ("Recommended IUL contribution? Y/N + amount") for admin-side aggregation.
 
-**Status:** OPEN
+**Status:** 🟡 DEFAULTED — confirm with Germain before building.
 
 ---
 
 ## 8. Step 5 — Third-party accounting firm handoff
 
-### 8.1 Frequency? (existing OPEN QUESTION from `_meetings/open_questions.md`)
+### 8.1 Frequency? *(resolves an open question from `_meetings/open_questions.md`)*
 
-**Default proposal candidates:**
-- **(a) Quarterly** — sync with quarterly P&L cycle
-- **(b) Annually** — at year-end for tax filing
-- **(c) Tax-season-driven** — January–April peak with periodic check-ins
-- **(d) Event-driven** — when a specific client situation requires it
+**Decision:** **Per-client, mixed cadence.** Germain's verbatim answer (paraphrased from verbal sync 2026-04-29):
 
-**Status:** OPEN — Germain confirms.
+> The frequency is either quarterly or semi-annually depending on how the client files taxes. Additionally, it is triggered by tax season for one-time clients who just want to get their books done on time (one-time service).
 
-### 8.2 What documents go to the firm? Same per client, or varies?
+**Implications:**
+1. **Each `client_services` row needs its own tax-firm cadence setting** — quarterly OR semi-annual, picked at activation by Germain.
+2. **A separate service variant exists for "one-time tax-season clients"** — these clients only engage SGS in tax season for a single books-and-file pass. This is treated as a different mode of SOP-03 OR a different service.
 
-**Default proposal:** Standard package (bank statements, P&L, balance sheet, payroll reports, prior-year comparison). Optionally adds: contracts, big-ticket invoices.
+**Build implication:**
+- Add `client_services.tax_firm_cadence TEXT` (values: `quarterly` | `semi_annual` | `tax_season_only` | NULL for non-SOP-03).
+- The recurring-task scheduler (see §9) reads this field and spawns the "Send tax-prep docs to firm" task at the right intervals per client.
+- For `tax_season_only` clients, the task spawns once around Feb–March (configurable).
 
-**Build implication:** Same `documents` table; admin filters to "tax-prep package" via a category or tag.
+**⚠️ Pain point flagged:** the boundary between "SOP-03 tax-season-only client" and "SOP-04 one-time tax filing variant" is unclear. Both are described as one-time, both involve sending to the firm, both are tax-season-driven. **Logged in `pain_points.md`** for cross-SOP clarification with Germain + Abner before building the tax-season-only variant.
 
-**Status:** OPEN
+**Status:** ✅ ANSWERED — Germain, 2026-04-29 (with cross-SOP ambiguity flagged separately)
 
-### 8.3 Does the dashboard track that the firm received it?
+### 8.2 Documents sent — same per client or varies?
 
-**Default proposal:** Yes — internal-only task: "Send tax-prep docs to firm" with fields:
-- Sent on (date)
-- Firm contact / email used
-- Delivery method (email / Drive folder / firm's portal)
-- Confirmation received (date)
+**Default proposal (no explicit answer — defaulting):** Standard package (bank statements, P&L, balance sheet, payroll reports, prior-year comparison). Optional adds: contracts, big-ticket invoices.
 
-Same pattern as SOP-01's "law firm coordination" step.
+**Build implication:** Admin filters `documents` to "tax-prep package" via category or tag. New document category `tax_prep_package` OR multi-select tags.
 
-**Status:** OPEN
+**Status:** 🟡 DEFAULTED — confirm with Germain before building.
+
+### 8.3 Track that firm received it?
+
+**Default proposal (no explicit answer — defaulting):** Yes — internal-only task: "Send tax-prep docs to firm" with fields for sent date, firm contact email, delivery method, confirmation received. Same pattern as SOP-01 law-firm coordination.
+
+**Status:** 🟡 DEFAULTED — confirm with Germain before building.
 
 ---
 
 ## 9. Recurring task mechanics (cross-cutting)
 
-This isn't a step in SOP-03 per se, but the slice surfaces it for the first time.
+### 9.1 Cadence shape?
 
-### 9.1 How do we want monthly/quarterly/annual tasks to work?
+**Decision (implied by §7.1 answer):** Yes, build the recurring-task mechanic now. SOP-03 needs it for the October P&L task at minimum; the monthly meeting + quarterly review + tax-firm handoff also use it.
 
-**Default proposal:** New table `service_recurring_tasks` describing tasks that auto-spawn on a cadence. Schema (proposed):
-- `service_id` — which service this attaches to
-- `title` / `description` / `default_priority` — same as `service_task_templates`
-- `cadence` — `monthly | quarterly | annually | semi_annually`
-- `cadence_config` — JSONB (e.g., `{"month": 10, "day": 1}` for October 1st annually, `{"day_of_month": 1}` for monthly)
-- `default_due_offset_days` — relative to spawn date
+**Build implication:**
 
-A daily scheduled function checks each active `client_services` row, looks up its recurring tasks, and spawns any that are due. Spawned tasks land in the existing `tasks` table with `service_id` set.
+```sql
+CREATE TABLE service_recurring_tasks (
+  id UUID PK,
+  service_id UUID FK,
+  title TEXT,
+  description TEXT,
+  default_priority task_priority,
+  cadence TEXT CHECK (cadence IN ('monthly','quarterly','semi_annually','annually','custom')),
+  cadence_config JSONB,                  -- e.g., {"month": 10, "day": 1} for Oct 1 annually
+  default_due_offset_days INT,           -- relative to spawn date
+  read_per_client_setting TEXT,          -- NULL or e.g., 'tax_firm_cadence' to override cadence per client_service
+  sort_order INT
+);
+```
 
-**Reuse:** Same mechanic supports SOP-04's contractor monthly check, SOP-07's advisory check-ins, SOP-09's post-delivery follow-ups.
+A new daily Edge Function `spawn-recurring-tasks` (triggered by Supabase pg_cron) checks each active `client_services` row for due recurring tasks and spawns them. The `read_per_client_setting` field lets a recurring task pick its cadence from a per-client field (used by the tax-firm handoff per §8.1).
 
-**Status:** OPEN — Germain (and Karen) confirm this is the right shape.
+**Status:** ✅ ANSWERED — Germain, 2026-04-29 (architectural confirmation via §7.1).
 
-### 9.2 What happens if a recurring task wasn't completed before the next one spawns?
+### 9.2 What if the previous month's task wasn't completed?
 
-**Default proposal:** The new task spawns regardless, but the dashboard surfaces "previous month's task still open" prominently (red badge, dashboard alert). No silent skipping.
+**Decision:** **A — new task spawns regardless; old stays open with overdue badge.** No silent skipping.
 
-**Status:** OPEN
+**Status:** ✅ ANSWERED — Germain, 2026-04-29
 
 ---
 
-## 10. GHL pipeline mapping — for Karen
+## 10. GHL pipeline mapping — STILL OPEN (Karen)
 
 ### 10.1 GHL pipeline stages?
 
-**Status:** ⏳ OPEN — Karen.
+**Status:** ⏳ OPEN — pending Karen.
 
-**Working assumption (placeholder):**
-1. Activated — awaiting docs
-2. Docs received — QB setup in progress
-3. QB active — bookkeeping ongoing
-4. (No further linear stages — recurring service)
+**Working assumption (placeholder):** SOP-03 is mostly post-activation operational work, not a linear pipeline. Stages might be: Activated → QB Setup → Active (recurring) → Cancelled. Karen confirms.
 
-**Status field stops being linear once active. Karen confirms.**
+### 10.2 GHL custom fields?
 
-### 10.2 GHL custom fields to mirror?
-
-**Status:** ⏳ OPEN — Karen. Likely: monthly meeting status, quarterly report status, query backlog count, third-party firm last-sent date.
+**Status:** ⏳ OPEN — pending Karen.
 
 ### 10.3 Email dispatch via GHL
 
-Per the 2026-04-29 architectural decision, all client-facing emails for SOP-03 (welcome, monthly meeting reminder, quarterly report ready, query reminders) **queue to `email_log` and dispatch via GHL.** Same pattern as SOP-01.
+Per the 2026-04-29 architectural decision, all SOP-03 emails route through GHL via `email_log` rows with `status='pending'`. Specifically:
+- New query notifications
+- Overdue query reminders
+- Monthly meeting confirmations / reminders (via Calendly + GHL)
+- Quarterly report ready notification
+- Annual IUL recommendation notification
 
 ---
 
 ## 11. Pricing & billing
 
-### 11.1 Standard $5,000/month?
+### 11.1 Pricing model?
 
-**Default proposal:** Standard $5,000/month per the pricing model in `Processos_internos/CLAUDE.md`. Auto-generates an invoice each month (or on activation + recurring billing setup).
+**Decision:** **D — tiered + special case.** Germain's verbatim:
 
-**Status:** OPEN — confirm OR specify tiers (simple book vs. complex multi-entity client, for example).
+> The pricing model is tiered based on how many companies the client has us manage, OR charged as a single service if the client has us do this only for tax season.
 
-### 11.2 When does billing start?
+**Implications:**
+- **Tiered SOP-03 (recurring):** the tier is determined by # of companies managed. Tier dollar amounts TBD — need Germain to specify (e.g., 1 company = $X/mo, 2 = $Y/mo, 3+ = $Z/mo).
+- **One-time SOP-03 (tax-season-only):** flat single-service charge (amount TBD).
 
-**Default proposal:** Bills the first day of the month after activation; first month is prorated if activated mid-month. Or — straightforward — bills $5,000 on activation and renews monthly.
+**Build implication:**
+- `services.base_price` doesn't capture tiers. Need either:
+  - (a) Separate `services` rows per tier (e.g., "Managed Accounting — 1 Company," "Managed Accounting — 2 Companies"). Simple; Germain picks at activation.
+  - (b) A `service_pricing_tiers` table with a `tier_select` field on `client_services`.
+- Recommendation: **(a) for v1** — simpler, fewer schema changes. Migrate to (b) if pricing complexity grows.
+- Also need a separate `services` row for "Tax-Season Only Bookkeeping" with its own one-time price.
 
-**Status:** OPEN
+**Status:** ✅ ANSWERED — Germain, 2026-04-29; **specific tier dollar amounts still needed.**
 
-### 11.3 Can a client pause/cancel?
+### 11.2 When billing starts?
 
-**Default proposal:** Yes — admin can deactivate the service from `AdminClientDetail`, which stops auto-billing the next cycle. Past invoices remain.
+**Decision (per §1.2 answer A):** **Auto-invoice on activation; client must pay before first month starts.** Recurring billing renews monthly thereafter.
 
-**Status:** OPEN — confirm cancellation policy with Germain (notice period? immediate? prorated refund?).
+**Status:** ✅ ANSWERED — Germain, 2026-04-29
+
+### 11.3 Pause / cancel?
+
+**Default proposal (not explicitly answered):** Admin can deactivate from `AdminClientDetail`, stops auto-billing next cycle. Past invoices stand.
+
+**Status:** 🟡 DEFAULTED — confirm with Germain.
 
 ---
 
-## 12. Implementation summary (filled in after answers)
+## 12. Implementation summary (locked, with TBDs)
 
-Once questions resolve, this section captures what we're building. Tentative scope:
+### Database changes (proposed migration `<timestamp>_sop03_slice_schema.sql`)
 
-**Database changes (single migration):**
-- New tables: `client_queries` (Step 3.1 workflow), `service_recurring_tasks` (cadence-driven task spawning).
-- Document categories: `quarterly_report`, `annual_iul_review`, `tax_prep_package` (or `bank_statement`, etc. per Germain's preference).
-- Possibly `service_document_requirements` if §2.1 confirms checklist approach.
-- Recurring task scheduler (Edge Function on daily cron) — first cron-style scheduled function in the project.
+- New tables:
+  - `client_queries` (Step 3.1 workflow — full schema in §5.1)
+  - `service_recurring_tasks` (cadence-driven task spawning — full schema in §9.1)
+- Add columns to `client_services`:
+  - `qb_configured_at TIMESTAMPTZ`
+  - `tax_firm_cadence TEXT` (CHECK in: `quarterly`, `semi_annual`, `tax_season_only`, NULL)
+  - Optional: a `metadata JSONB` for future per-service flags
+- Document category enum additions: `quarterly_report`, `annual_iul_review`, `tax_prep_package`
+- Rename `discovery_sessions` → `client_meetings` (or add a `kind` field) so it can be reused for monthly meetings
+- New email templates: `query_overdue_reminder`, `client_query_new`, `quarterly_report_ready`
+- New SECURITY DEFINER RPC: `answer_client_query(p_id, p_response, p_attachment_id?)`
 
-**SOP-03 task templates seeded:**
-1. *Request financial documents from client* — high, due +1d
-2. *Configure QuickBooks + connect bank feeds* — high, due +5d
-3. *Schedule first monthly meeting* — medium, due +14d (recurring monthly thereafter)
-4. *Send tax-prep docs to firm* — medium, recurring per §8.1 frequency
+### Seed (proposed `supabase/seeds/sop03_managed_accounting.sql`)
 
-**Recurring tasks seeded:**
-- Monthly client meeting — every month, +5 days
-- Quarterly report preparation — every Q1/Q2/Q3/Q4, +10 days
-- October P&L + IUL review — annually, October 1, +30 days
-- Tax-prep firm send — per §8.1 cadence
+- Service rows: "Managed Accounting — 1 Company," "Managed Accounting — 2 Companies," "Managed Accounting — 3+ Companies," "Tax-Season Bookkeeping" (one-time). All with `<TBD price>` until Germain provides numbers.
+- 4 task templates for SOP-03 (one-time onboarding tasks):
+  - Request financial documents from client (high, +1d)
+  - Configure QuickBooks + connect bank feeds (high, +5d)
+  - Schedule first monthly meeting (medium, +14d)
+  - Set tax-firm cadence per this client (high, +2d) — admin picks quarterly/semi-annual at task time
+- 4 recurring tasks for SOP-03 (defined in `service_recurring_tasks`):
+  - Monthly client meeting (cadence: monthly, day 5)
+  - Quarterly P&L report prep (cadence: quarterly, day 10 of next quarter)
+  - October P&L + IUL review (cadence: annually, October 1)
+  - Send tax-prep docs to firm (cadence: read-from-`client_services.tax_firm_cadence`)
 
-**Admin UI:**
-- SOP-03 service card on `AdminClientDetail` showing query backlog + meeting status + quarterly report status + tax-prep firm last-sent.
-- "Queries" admin page (filter by client/status/overdue).
-- "New query" dialog reusable from anywhere.
+### Edge Functions
 
-**Client UI:**
-- Pending questions widget on `/portal` dashboard.
-- New `/portal/queries` page listing all queries with respond/answer flow.
-- Quarterly reports listed on services page.
+- `calendly-webhook` — receives `invitee.created` events, creates `client_meetings` rows
+- `spawn-recurring-tasks` — daily pg_cron, scans active services, spawns due recurring tasks
+- `flag-overdue-queries` — daily pg_cron, flips overdue status + queues reminder emails
+
+### Admin UI
+
+- "All Queries" page (filters: all / mine / overdue / by client)
+- Global "Ask client" button (header)
+- New query dialog
+- SOP-03 service card on `AdminClientDetail` showing: query backlog count, QB checkbox, monthly meeting status, quarterly report status, tax-firm cadence picker, last-sent date
+
+### Client UI
+
+- `/portal/queries` page (answer flow)
+- Pending-questions widget on `/portal` dashboard
+- SOP-03 service card on `/portal/services` showing: meeting schedule, quarterly reports, tax-prep status
+
+### Estimated scope: 5–7 sessions
+
+This is the biggest slice yet — heavier than SOP-01 because of:
+- New client-query workflow (whole feature)
+- Recurring-task infrastructure (used by SOP-03/04/07 long term)
+- Calendly webhook integration
+- Pricing tier handling
 
 ---
 
@@ -338,4 +448,30 @@ Once questions resolve, this section captures what we're building. Tentative sco
 
 | Date | Section | Decider | Answer |
 |------|---------|---------|--------|
-|      |         |         |        |
+| 2026-04-29 | §1.1 | Germain | Both onboarding and upsell paths |
+| 2026-04-29 | §1.2 | Germain | Auto-invoice on activation, must pay before first month |
+| 2026-04-29 | §2.1 | Germain | Free-form upload, no checklist |
+| 2026-04-29 | §2.2 | Germain | Admin can upload on behalf of client |
+| 2026-04-29 | §3.1 | Germain | QB status only in v1, no API integration |
+| 2026-04-29 | §3.2 | Germain | Nothing client-visible about QB |
+| 2026-04-29 | §4.1 | Germain | No bookkeeping volume metrics |
+| 2026-04-29 | §5.1 | Germain | Quick-create button anywhere in dashboard |
+| 2026-04-29 | §5.2 | Germain | Pending-questions widget + dedicated portal page |
+| 2026-04-29 | §5.3 | Germain | Auto-reminder email at +3 business days overdue |
+| 2026-04-29 | §5.4 | Germain | Creator owns follow-up; Germain has master view |
+| 2026-04-29 | §5.5 | Germain | Email + in-portal notification on new query |
+| 2026-04-29 | §6.1 | Germain | Calendly fully integrated via webhook |
+| 2026-04-29 | §6.2 | Germain | Dashboard is source of truth for meeting notes |
+| 2026-04-29 | §6.3 | Germain | Manual upload of quarterly report (v1) |
+| 2026-04-29 | §6.4 | Germain | Status indicator on SOP-03 service card |
+| 2026-04-29 | §7.1 | Germain | Auto-spawn October P&L task on Oct 1 |
+| 2026-04-29 | §8.1 | Germain | Per-client cadence (quarterly OR semi-annual based on filing pattern); plus tax-season-only one-time variant |
+| 2026-04-29 | §9.2 | Germain | New task spawns regardless; old stays open as overdue |
+| 2026-04-29 | §11.1 | Germain | Tiered by # of companies (numbers TBD); plus single-service charge for tax-season-only |
+| 2026-04-29 | §11.2 | Germain | Bills on activation; recurring monthly thereafter |
+| TBD | §7.2 | Germain | _defaulted_ |
+| TBD | §8.2 | Germain | _defaulted_ |
+| TBD | §8.3 | Germain | _defaulted_ |
+| TBD | §11.1 dollar amounts | Germain | _pending — get tier amounts_ |
+| TBD | §11.3 | Germain | _defaulted_ |
+| TBD | §10.1, §10.2 | Karen | _pending GHL pipeline definition_ |
