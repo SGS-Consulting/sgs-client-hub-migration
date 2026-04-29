@@ -229,29 +229,40 @@ Aim: each SOP slice ~1–3 sessions. If a slice balloons past that, peel out a s
 - [x] **2026-04-29** — **Session N+3a shipped:** Client portal SOP-01 panel — kit + certificate downloads (signed-URL Storage), "Acknowledge & close" with confirm dialog, `acknowledge_client_service(p_id)` SECURITY DEFINER RPC (migration `20260429182958`). Document-category dropdown bug fix.
 - [x] **2026-04-29** — **Architectural decision (Karen):** email dispatch is GoHighLevel's job, not a separate service (Resend/SMTP). Dashboard composes + queues to `email_log`; GHL picks up `pending` rows during Phase 2 GHL bridge work. Captured in `feedback_email_via_ghl` Claude memory + `roadmap.md` Phase 2 deliverables.
 - [x] **2026-04-29** — **SOP-01 v1 functionally complete** except PDF certificate auto-gen (waiting on Abner's signature image — can ship brand-only as interim) and end-to-end smoke test. Slice was 4 sessions (N+1 through N+3a) plus design.
+- [x] **2026-04-29** — **SOP-03 design locked** with Germain (verbal sync). Tier dollar amounts still pending; tax-season-only variant blocked on the SOP-03/SOP-04 boundary pain point.
+- [x] **2026-04-29** — **SOP-03 schema + seed shipped** (migration `20260429200021`). 4 services (3 tiers + tax-season), 4 onboarding task templates per service, 4 recurring task definitions per recurring tier, 3 new email templates. Placeholder prices.
+- [x] **2026-04-29** — **SOP-03 client query workflow** (admin "All Queries" page + client "Preguntas" portal page + `answer_client_query` RPC + `NewQueryDialog` reusable component). End-to-end Q&A flow live.
+- [x] **2026-04-29** — **SOP-03 service cards** (admin: QB checkbox + cadence picker + status pills; client: cadence-aware quarterly/semi-annual reports section + IUL review section + pending-questions banner).
+- [x] **2026-04-29** — **SOP-03 cron schedulers** (migration `20260429205220`): `spawn_recurring_tasks()` daily 05:00 UTC + `flag_overdue_queries()` daily 06:00 UTC. Smoke-tested manually — 3 tasks correctly spawned. pg_cron extension enabled.
+- [x] **2026-04-29** — **Legacy services deactivated** (Bookkeeping Monthly, Tax Filing Federal/State) since they overlap with SOP-03/SOP-04 services. `dev_seed.sql` updated to seed them as inactive going forward.
 
 ---
 
 ## Next concrete step
 
-**SOP-03 (Managed Accounting) design phase active.** `sop03_design.md` drafted 2026-04-29 — first **recurring service** in the project, introduces dashboard mechanics (recurring task spawning, client-query workflow, monthly meeting cadence, quarterly reports) that will be reused by SOP-04 and SOP-07.
+**SOP-03 v1 effectively complete except the Calendly webhook.** Schema, seed, admin/client UI, query workflow, recurring-task scheduler, and overdue-query flagger all shipped + tested 2026-04-29. The webhook is the last piece (~1 session) and enables self-scheduled monthly meetings — also reusable for SOP-00 discovery and SOP-07 advisory check-ins later.
 
-**Action:** Javi takes `sop03_design.md` to **Germain** for answers. Karen's §10 (GHL) can be answered separately.
+**For next session, in priority order:**
 
-Headline open questions worth highlighting to Germain:
-- §2.1 — Required document checklist vs. free-form upload?
-- §3.1 — QuickBooks integration in v1 (no, just status-tracked) or later?
-- §5.x — Client-query workflow shape (the Step 3.1 daily-comms machinery — biggest new infrastructure)
-- §7.1 — Auto-spawning October P&L task each year?
-- §8.1 — Frequency of tax-prep firm handoff (existing open question from `_meetings/open_questions.md`)
-- §11 — Pricing confirmation ($5,000/month standard, billing cadence)
+1. **Calendly webhook for self-scheduled meetings.** Edge Function receives `invitee.created`; matches the invitee email to a client; creates a `discovery_sessions` row with `kind='monthly_accounting'` (or `'discovery'` / `'advisory_checkin'` based on event-type metadata). This closes out the SOP-03 slice.
 
-Once Germain's answers are captured into `sop03_design.md`'s Decision log, implementation starts. Estimated 4–6 sessions for SOP-03 because it adds recurring-task infrastructure on top of the SOP-specific UI.
+2. **Pre-draft SOP-04 (Tax & Compliance) design doc** — Germain runs this too, so Javi can take both SOP-04's questions and the unresolved SOP-03 items (tier dollar amounts + the SOP-03/SOP-04 boundary pain point) to him in one batch.
 
-**Backlog from SOP-01 (deferred, not blocking SOP-03):**
-- PDF completion certificate auto-gen (need Abner's signature, OR ship brand-only as interim)
-- SOP-01 end-to-end smoke test on dev Supabase
-- Hosting / deployment (pending Karen's call on subdomain + CNAME setup)
+3. **Then implement SOP-04** — should reuse most of the SOP-03 mechanics (recurring tasks, client queries, document categories, service cards). Estimated 3-4 sessions because the foundation is now in place.
+
+4. **Eventually:** SOP-02 (Delaware), SOP-05/06/07 (Abner-led services), SOP-09 (Branding — needs lots of cross-team prep).
+
+**Pending external inputs (not blocking next session):**
+| Who | What | Captured in |
+|-----|------|-------------|
+| Germain | SOP-03 tier dollar amounts | `sop03_design.md` §11 |
+| Germain + Abner | SOP-03 vs. SOP-04 tax-season boundary | `pain_points.md` |
+| Abner | Signature image (PNG) for SOP-01 PDF cert | `sop01_design.md` §6.2 |
+| Karen | Hosting (Vercel + CNAME); GHL pipeline mappings; Stripe + Calendly setup | **`karen_integrations.md`** ← single Spanish handoff doc |
+
+**Backlog (unblocked but lower-priority than SOP-04):**
+- PDF completion certificate auto-gen for SOP-01
+- SOP-01 + SOP-03 end-to-end smoke tests on dev Supabase
 
 ---
 
@@ -259,15 +270,15 @@ Once Germain's answers are captured into `sop03_design.md`'s Decision log, imple
 
 See `sop01_design.md` — every Abner-side question answered; only Karen's GHL §7 still pending (doesn't block implementation).
 
-**Implementation progress (slice steps):**
-1. ✅ Migration: enum additions (`corporate_kit`, `current_structure`, `completion_certificate`), new fields (`acknowledged_at`, `ghl_pipeline_stage`, `business_profile_data`), new tables (`email_templates`, `email_log`).
-2. ✅ Seed: Business Formation & Structure service @ $500 + 6 task templates + 2 email templates.
-3. ✅ **Portal invite flow** — Edge Function deployed, `/auth/callback` route added, AdminClientDetail button calls real send.
-4. ✅ Admin UI for SOP-01 — Services tab "Send kit email" button + reusable SendTemplatedEmailDialog. Document-category dropdown extended for SOP-01 categories.
-5. ⛔ ~~Email send infrastructure (Resend / SMTP)~~ — **DEFERRED to Phase 2 GHL bridge** per Karen's decision 2026-04-29. The dashboard composes templated emails and writes them to `email_log` with status `pending`; Karen will pick these up via GHL's email/SMS automation rules during the Phase 2 wiring. Avoids running a parallel email service alongside GHL's existing one.
-6. ✅ Client UI for SOP-01 — kit/certificate downloads + Acknowledge & close button + acknowledge_client_service RPC.
-7. ⏭️ **Next:** PDF completion certificate auto-gen (`@react-pdf/renderer`). Needs Abner's signature image — interim option: brand-only certificate (logo + text, no signature) shipped now; signature swapped in once we have the asset.
-8. End-to-end smoke test on dev Supabase.
+**SOP-01 implementation progress:**
+1. ✅ Migration: enum additions, client_services columns, email_templates, email_log
+2. ✅ Seed: Business Formation & Structure service + 6 task templates + 2 email templates
+3. ✅ Portal invite flow (Edge Function + auth callback + signup)
+4. ✅ Admin UI: SendTemplatedEmailDialog wired into Services tab
+5. ⛔ ~~Email send infrastructure~~ — DEFERRED to Phase 2 GHL bridge (Karen's call)
+6. ✅ Client UI for SOP-01 — kit downloads + Acknowledge & close + RPC
+7. ⏭️ **Backlog:** PDF certificate auto-gen (needs Abner's signature image)
+8. ⏭️ **Backlog:** End-to-end smoke test on dev Supabase
 
 **Open scope question for Javi:** §6.2 (closure certificate) — recommended starting with **manual upload** (Abner fills a Word/PDF template and uploads); auto-PDF-generation deferred to v1.5 unless Abner pushes back. Confirm or override before implementation.
 
