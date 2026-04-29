@@ -80,6 +80,13 @@ END $$;
 
 -- ---------------------------------------------------------
 -- 2. Services (idempotent on name)
+--
+-- NOTE 2026-04-29: Bookkeeping (Monthly), Tax Filing — Federal, and
+-- Tax Filing — State are seeded as INACTIVE because they're
+-- superseded by the SOP-03 "Managed Accounting" tier services
+-- (sop03_managed_accounting.sql) and (eventually) the SOP-04
+-- service rows. They stayed in this seed only so that earlier
+-- demo scenarios that referenced them don't break.
 -- ---------------------------------------------------------
 INSERT INTO public.services (name, category, description, base_price, is_active)
 SELECT s.name, s.category, s.description, s.base_price, s.is_active
@@ -97,14 +104,14 @@ FROM (VALUES
         'Delaware registered agent service, billed annually.',
         150.00, TRUE),
     ('Bookkeeping (Monthly)', 'Accounting',
-        'Monthly bookkeeping, categorization, and bank reconciliation.',
-        350.00, TRUE),
+        'Legacy generic bookkeeping service — superseded by SOP-03 Managed Accounting tiers. Kept inactive for backward compat.',
+        350.00, FALSE),
     ('Tax Filing — Federal', 'Tax',
-        'Annual federal tax return preparation and filing.',
-        800.00, TRUE),
+        'Legacy federal tax filing service — will be superseded by SOP-04 once that slice ships. Kept inactive.',
+        800.00, FALSE),
     ('Tax Filing — State', 'Tax',
-        'State tax return preparation and filing.',
-        300.00, TRUE),
+        'Legacy state tax filing service — will be superseded by SOP-04 once that slice ships. Kept inactive.',
+        300.00, FALSE),
     ('Business Banking Setup', 'Banking',
         'Guidance and assistance opening US business bank accounts (Mercury, Relay, etc.).',
         200.00, TRUE)
@@ -112,6 +119,13 @@ FROM (VALUES
 WHERE NOT EXISTS (
     SELECT 1 FROM public.services existing WHERE existing.name = s.name
 );
+
+-- Force-deactivate legacy services if they were previously seeded as active
+-- (covers the case where dev_seed.sql ran before this comment was added).
+UPDATE public.services
+SET is_active = FALSE
+WHERE name IN ('Bookkeeping (Monthly)', 'Tax Filing — Federal', 'Tax Filing — State')
+  AND is_active = TRUE;
 
 -- ---------------------------------------------------------
 -- 3. Sample clients (idempotent on email)
