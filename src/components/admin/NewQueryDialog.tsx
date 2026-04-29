@@ -31,6 +31,7 @@ type Client = {
   contact_name: string | null;
   email: string;
   user_id: string | null;
+  status: "active" | "prospect" | "inactive";
 };
 
 interface Props {
@@ -74,12 +75,14 @@ export const NewQueryDialog = ({
     setClientId(defaultClientId ?? "");
     setDueDate(addBusinessDays(new Date(), 3).toISOString().split("T")[0]);
 
-    // Load active clients for the picker (only if not pinned to one)
+    // Load all clients for the picker (only if not pinned to one).
+    // No status filter — queries can go to any client we have a record for,
+    // not just `active` — prospects need bookkeeping setup questions too,
+    // and tax-season-only clients are typically `prospect` until activated.
     if (!defaultClientId) {
       supabase
         .from("clients")
-        .select("id, company_name, contact_name, email, user_id")
-        .eq("status", "active")
+        .select("id, company_name, contact_name, email, user_id, status")
         .order("company_name")
         .then(({ data }) => setClients((data as Client[]) ?? []));
     }
@@ -197,6 +200,7 @@ export const NewQueryDialog = ({
                     <SelectItem key={c.id} value={c.id}>
                       {c.company_name}
                       {c.contact_name ? ` — ${c.contact_name}` : ""}
+                      {c.status !== "active" ? ` (${c.status})` : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
