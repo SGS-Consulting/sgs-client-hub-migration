@@ -233,10 +233,15 @@ Aim: each SOP slice ~1–3 sessions. If a slice balloons past that, peel out a s
 **Implementation order for the SOP-01 slice:**
 1. Migration: enum additions (`corporate_kit`, `current_structure`, `completion_certificate`), new fields (`acknowledged_at`, `ghl_pipeline_stage`), new tables (`business_profile`, `email_templates`, `email_log`).
 2. Seed: 6 SOP-01 task templates + update Business Formation service price to $500.
-3. Admin UI: SOP-01 service card with third-party tracking, kit/certificate upload, send-email dialog.
-4. Email infrastructure: Resend integration via Edge Function + first template seeded.
-5. Client UI: portal section for requested-docs / questionnaire / kit downloads / Acknowledge button.
-6. Smoke test end-to-end on dev Supabase.
+3. **Proper portal invite flow** (carried over from SOP-00 polish — surfaced during 2026-04-29 smoke test).
+   - Smoke test discovered current "Invite to portal" button only copies `/auth`, which has no signup form (registration was removed in commit `623eb46`). New clients have no path to create an account.
+   - Build: Edge Function `invite-portal-user` that calls `supabase.auth.admin.inviteUserByEmail(client.email)` → Supabase sends magic-link email → client lands on "set password" page → `handle_new_user` trigger auto-links them to the client record (already in place).
+   - Reusable: every SOP needs this; building it inside SOP-01 slice is small, paid-once-used-everywhere.
+   - For email: start with Supabase's default email (free, no setup); migrate to Resend in step 5 once that's wired.
+4. Admin UI: SOP-01 service card with third-party tracking, kit/certificate upload, send-email dialog.
+5. Email infrastructure: Resend integration via Edge Function + first template seeded.
+6. Client UI: portal section for requested-docs / questionnaire / kit downloads / Acknowledge button.
+7. Smoke test end-to-end on dev Supabase.
 
 **Open scope question for Javi:** §6.2 (closure certificate) — recommended starting with **manual upload** (Abner fills a Word/PDF template and uploads); auto-PDF-generation deferred to v1.5 unless Abner pushes back. Confirm or override before implementation.
 
