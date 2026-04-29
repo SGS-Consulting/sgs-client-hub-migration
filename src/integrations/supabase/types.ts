@@ -88,6 +88,7 @@ export type Database = {
           id: string
           owner_id: string | null
           question: string
+          reminder_sent_at: string | null
           responded_at: string | null
           responded_by: string | null
           response: string | null
@@ -105,6 +106,7 @@ export type Database = {
           id?: string
           owner_id?: string | null
           question: string
+          reminder_sent_at?: string | null
           responded_at?: string | null
           responded_by?: string | null
           response?: string | null
@@ -122,6 +124,7 @@ export type Database = {
           id?: string
           owner_id?: string | null
           question?: string
+          reminder_sent_at?: string | null
           responded_at?: string | null
           responded_by?: string | null
           response?: string | null
@@ -1034,6 +1037,7 @@ export type Database = {
           progress: number
           service_id: string | null
           sort_order: number
+          source_recurring_task_id: string | null
           start_date: string | null
           status: Database["public"]["Enums"]["task_status"]
           tags: string[] | null
@@ -1054,6 +1058,7 @@ export type Database = {
           progress?: number
           service_id?: string | null
           sort_order?: number
+          source_recurring_task_id?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["task_status"]
           tags?: string[] | null
@@ -1074,6 +1079,7 @@ export type Database = {
           progress?: number
           service_id?: string | null
           sort_order?: number
+          source_recurring_task_id?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["task_status"]
           tags?: string[] | null
@@ -1101,6 +1107,13 @@ export type Database = {
             columns: ["service_id"]
             isOneToOne: false
             referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_source_recurring_task_id_fkey"
+            columns: ["source_recurring_task_id"]
+            isOneToOne: false
+            referencedRelation: "service_recurring_tasks"
             referencedColumns: ["id"]
           },
           {
@@ -1308,6 +1321,7 @@ export type Database = {
         Returns: string
       }
       current_client_id: { Args: never; Returns: string }
+      flag_overdue_queries: { Args: never; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1316,6 +1330,7 @@ export type Database = {
         Returns: boolean
       }
       is_internal_user: { Args: { _user_id: string }; Returns: boolean }
+      spawn_recurring_tasks: { Args: never; Returns: number }
     }
     Enums: {
       app_role: "admin" | "client" | "finance" | "operations" | "staff"
