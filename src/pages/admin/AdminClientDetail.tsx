@@ -302,12 +302,25 @@ const AdminClientDetail = () => {
   };
 
   // ---- Portal invite ----
-  const copyPortalInvite = async () => {
+  const [invitingPortal, setInvitingPortal] = useState(false);
+  const sendPortalInvite = async () => {
     if (!client) return;
-    const url = `${window.location.origin}/auth`;
-    await navigator.clipboard.writeText(url);
+    setInvitingPortal(true);
+    const { data, error } = await supabase.functions.invoke("invite-portal-user", {
+      body: { client_id: client.id },
+    });
+    setInvitingPortal(false);
+
+    if (error) {
+      toast.error(`Could not send invite: ${error.message}`);
+      return;
+    }
+    if (data?.error) {
+      toast.error(data.error);
+      return;
+    }
     toast.success(
-      `Signup link copied. Send to ${client.email} — they'll be linked to this client record on signup.`
+      `Portal invite sent to ${client.email}. They'll receive an email to set their password and access the portal.`
     );
   };
 
@@ -328,8 +341,14 @@ const AdminClientDetail = () => {
             Portal account linked
           </span>
         ) : (
-          <Button variant="outline" size="sm" onClick={copyPortalInvite}>
-            <Mail className="h-4 w-4" /> Invite to portal
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={sendPortalInvite}
+            disabled={invitingPortal}
+          >
+            <Mail className="h-4 w-4" />
+            {invitingPortal ? "Sending..." : "Invite to portal"}
           </Button>
         )}
       </div>
