@@ -31,6 +31,9 @@ const DOC_CATEGORIES: { value: string; label: string }[] = [
   { value: "tax", label: "Tax" },
   { value: "financial", label: "Financial" },
   { value: "legal", label: "Legal" },
+  { value: "current_structure", label: "Current Structure (SOP-01)" },
+  { value: "corporate_kit", label: "Corporate Kit (SOP-01)" },
+  { value: "completion_certificate", label: "Completion Certificate (SOP-01)" },
   { value: "other", label: "Other" },
 ];
 
