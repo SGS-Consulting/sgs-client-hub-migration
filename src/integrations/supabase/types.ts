@@ -1334,6 +1334,7 @@ export type Database = {
         | "quarterly_report"
         | "annual_iul_review"
         | "tax_prep_package"
+        | "semi_annual_report"
       document_status: "pending_review" | "approved" | "rejected"
       entity_type:
         | "LLC"
@@ -1501,6 +1502,7 @@ export const Constants = {
         "quarterly_report",
         "annual_iul_review",
         "tax_prep_package",
+        "semi_annual_report",
       ],
       document_status: ["pending_review", "approved", "rejected"],
       entity_type: [

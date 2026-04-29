@@ -36,6 +36,7 @@ const DOC_CATEGORIES: { value: string; label: string }[] = [
   { value: "corporate_kit", label: "Corporate Kit (SOP-01)" },
   { value: "completion_certificate", label: "Completion Certificate (SOP-01)" },
   { value: "quarterly_report", label: "Quarterly Report (SOP-03)" },
+  { value: "semi_annual_report", label: "Semi-Annual Report (SOP-03)" },
   { value: "annual_iul_review", label: "Annual IUL Review (SOP-03)" },
   { value: "tax_prep_package", label: "Tax Prep Package (SOP-03)" },
   { value: "other", label: "Other" },

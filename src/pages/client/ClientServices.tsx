@@ -75,6 +75,7 @@ const ClientServices = () => {
         "corporate_kit",
         "completion_certificate",
         "quarterly_report",
+        "semi_annual_report",
         "annual_iul_review",
       ])
       .order("created_at", { ascending: false });
@@ -274,9 +275,19 @@ const ClientServices = () => {
   };
 
   const renderSop03Card = (cs: ClientService) => {
+    // Periodic reports — show whichever category matches this client's
+    // cadence. Quarterly clients see quarterly_report docs; semi-annual
+    // clients see semi_annual_report docs. Falls back to showing both
+    // when cadence is null/tax_season_only so nothing gets hidden.
+    const reportCategories =
+      cs.tax_firm_cadence === "semi_annual"
+        ? ["semi_annual_report"]
+        : cs.tax_firm_cadence === "quarterly"
+          ? ["quarterly_report"]
+          : ["quarterly_report", "semi_annual_report"];
     const reports = documents.filter(
       (d) =>
-        d.category === "quarterly_report" &&
+        reportCategories.includes(d.category) &&
         new Date(d.created_at) >= new Date(cs.started_at),
     );
     const iulReviews = documents.filter(
