@@ -156,12 +156,12 @@ No portal/integration with the firm. Just admin-side tracking.
 **Decision:** **B — yes, dashboard has an email template Abner edits and sends.**
 
 **Build implication (significant — new infrastructure):**
-- New table `email_templates` with rows for each templated email type (start with `sop01_kit_delivery`).
-- Edge Function `send-templated-email` that takes a template + variables + recipient and sends via an email provider (Resend recommended — free tier, simplest setup).
-- Admin UI: "Send kit delivery email" button on the SOP-01 service card → opens a dialog with the template body pre-filled (variables substituted), Abner edits, clicks Send.
-- Track sends in a new `email_log` table or as `documents` rows with category `email_log`.
+- ✅ New table `email_templates` with rows for each templated email type (start with `sop01_kit_delivery`).
+- ✅ Admin UI: "Send kit delivery email" button on the SOP-01 service card → opens a dialog (`SendTemplatedEmailDialog`) with the template body pre-filled (variables substituted), Abner edits, clicks Send.
+- ✅ `email_log` table — every send recorded with status `pending`, recipient, rendered subject + body, sent_by user.
+- ⛔ ~~Edge Function that actually sends via Resend/SMTP~~ — **deferred to Phase 2 GHL bridge** (decision by Karen 2026-04-29). The dashboard composes and queues; GHL picks up `email_log` rows where `status='pending'` and dispatches via its own email automation infrastructure. Avoids parallel email pipelines.
 
-**Scope flag:** This is non-trivial. Recommendation: build it as a reusable component since other SOPs will want it too. ~1.5 sessions estimated.
+**Scope status:** UI complete in v1; actual delivery is GHL's job in Phase 2.
 
 **Status:** ✅ ANSWERED — Abner, 2026-04-29
 

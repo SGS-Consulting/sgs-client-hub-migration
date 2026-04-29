@@ -153,14 +153,15 @@ Aim: each SOP slice ~1–3 sessions. If a slice balloons past that, peel out a s
 
 ## Phase 2 — GHL bridge
 
-**Goal:** Karen can wire the dashboard to GoHighLevel so existing GHL automations (email/SMS sequences, contact records, pipeline views) keep firing while the dashboard becomes operational truth. **GHL is not the payment processor — Stripe is.** GHL's role is contact + pipeline sync and downstream automations triggered by status changes.
+**Goal:** Karen can wire the dashboard to GoHighLevel so existing GHL automations (email/SMS sequences, contact records, pipeline views) keep firing while the dashboard becomes operational truth. **GHL is not the payment processor — Stripe is. GHL IS the email/SMS dispatch service** (decision 2026-04-29) — the dashboard composes templated emails and queues them in `email_log` with `status='pending'`; GHL picks them up and delivers. This avoids running a separate email service (Resend, custom SMTP, etc.) alongside GHL.
 
 **Deliverables:**
 - **Data flow decision doc** — for each entity (intake submission, client, task, invoice, document), decide: dashboard-of-record, GHL-of-record, or two-way sync. Surface trade-offs.
 - **Mapping table** — Supabase columns ↔ GHL contact custom fields, pipeline stages, etc.
 - **Webhook endpoints** — Supabase Edge Functions that GHL can POST to (and that we trigger on dashboard events). At minimum: new intake submission, new client, status change.
+- **Email dispatch from email_log** — GHL polls or is webhook-pinged whenever a row lands in `email_log` with `status='pending'`. GHL's automation sends the email and updates the row to `status='sent'` (with provider_message_id). This replaces the Resend/SMTP path that would otherwise have lived in an Edge Function.
 - **Karen's runbook** — step-by-step in the GHL UI: create custom fields, set up webhooks, build the pipeline mirror, test end-to-end.
-- **Test scenario** — one full end-to-end: prospect submits `/intake` → contact appears in GHL → email automation fires → pipeline stage advances when status changes in dashboard.
+- **Test scenario** — one full end-to-end: prospect submits `/intake` → contact appears in GHL → email automation fires (via email_log entry) → pipeline stage advances when status changes in dashboard.
 
 **Open decisions:**
 - Direction of truth for contact data: dashboard or GHL? Has implications for Phase 3.
@@ -235,11 +236,11 @@ Aim: each SOP slice ~1–3 sessions. If a slice balloons past that, peel out a s
 1. ✅ Migration: enum additions (`corporate_kit`, `current_structure`, `completion_certificate`), new fields (`acknowledged_at`, `ghl_pipeline_stage`, `business_profile_data`), new tables (`email_templates`, `email_log`).
 2. ✅ Seed: Business Formation & Structure service @ $500 + 6 task templates + 2 email templates.
 3. ✅ **Portal invite flow** — Edge Function deployed, `/auth/callback` route added, AdminClientDetail button calls real send.
-4. ⏭️ **Next:** Admin UI for SOP-01 — service card on `AdminClientDetail` with third-party tracking, kit/certificate upload, send-email dialog.
-5. Email send infrastructure: Resend integration via Edge Function (currently dashboard only LOGS to email_log; actual send for templated emails like sop01_kit_delivery still needs Resend wiring).
-6. PDF certificate generation (`@react-pdf/renderer`).
-7. Client UI: portal section for requested-docs / questionnaire / kit downloads / Acknowledge button.
-8. Smoke test end-to-end on dev Supabase.
+4. ✅ Admin UI for SOP-01 — Services tab "Send kit email" button + reusable SendTemplatedEmailDialog. Document-category dropdown extended for SOP-01 categories.
+5. ⛔ ~~Email send infrastructure (Resend / SMTP)~~ — **DEFERRED to Phase 2 GHL bridge** per Karen's decision 2026-04-29. The dashboard composes templated emails and writes them to `email_log` with status `pending`; Karen will pick these up via GHL's email/SMS automation rules during the Phase 2 wiring. Avoids running a parallel email service alongside GHL's existing one.
+6. ✅ Client UI for SOP-01 — kit/certificate downloads + Acknowledge & close button + acknowledge_client_service RPC.
+7. ⏭️ **Next:** PDF completion certificate auto-gen (`@react-pdf/renderer`). Needs Abner's signature image — interim option: brand-only certificate (logo + text, no signature) shipped now; signature swapped in once we have the asset.
+8. End-to-end smoke test on dev Supabase.
 
 **Open scope question for Javi:** §6.2 (closure certificate) — recommended starting with **manual upload** (Abner fills a Word/PDF template and uploads); auto-PDF-generation deferred to v1.5 unless Abner pushes back. Confirm or override before implementation.
 

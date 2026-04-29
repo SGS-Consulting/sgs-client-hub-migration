@@ -108,7 +108,7 @@ export const SendTemplatedEmailDialog = ({
       return;
     }
     toast.success(
-      "Email queued. Real delivery will fire once Resend is wired in the next session.",
+      "Email queued. Karen will dispatch it through GoHighLevel as part of the Phase 2 GHL bridge.",
     );
     onOpenChange(false);
     onSent?.();
