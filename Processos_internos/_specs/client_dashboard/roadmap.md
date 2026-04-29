@@ -221,14 +221,25 @@ Aim: each SOP slice ~1–3 sessions. If a slice balloons past that, peel out a s
 - [x] **2026-04-29** — Working topology established: Javi's own GitHub fork (`Javiasturiasb/sgs-client-hub`, private) + own Supabase project (`rvxonlgfasbkjdmtidky`). Karen's repo kept as `upstream` remote.
 - [x] **2026-04-29** — All 8 migrations applied to Javi's Supabase. `.env` now gitignored (was leaking before).
 - [x] **2026-04-29** — Dev seed deployed (`supabase/seeds/dev_seed.sql`): test admin user (`admin@sgs.test` / `admin123!`), 8 standard services + Onboarding service, 4 sample clients, 5 SOP-00 task templates. SOP-00 vertical slice is now end-to-end testable.
+- [x] **2026-04-29** — `Processos_internos/` brought into the dashboard repo (option B in 3-way decision); SOPs and dashboard specs now versioned and reviewable by Karen via the same fork.
+- [x] **2026-04-29** — Phase 1b SOP-01 design **locked** with Abner (verbal sync). 15 of 17 design questions answered; Karen's 2 GHL questions pending but non-blocking. New pain point logged: SOP-01 structure-evaluation rationale isn't recorded anywhere (single point of failure on Abner).
 
 ---
 
 ## Next concrete step
 
-**Phase 1 (SOP-00) is deployable and seeded.** Two parallel tracks pick up from here:
+**Phase 1b SOP-01 design is locked (2026-04-29).** See `sop01_design.md` — every Abner-side question answered; only Karen's GHL §7 still pending (doesn't block implementation).
 
-1. **Smoke-test SOP-00 end-to-end** on Javi's dev Supabase: submit `/intake` → admin review → convert → discovery → upload proposal → invoice w/ Stripe link → record payment → activate Onboarding (5 tasks auto-create) → portal invite. Surfaces any RLS or wiring bugs before SOP-01 builds on top.
-2. **Begin Phase 1b — SOP-01 design phase.** Javi reviews `sop01_design.md`, takes the questions to Abner, captures answers back into the doc. Once design is locked, SOP-01 implementation starts.
+**Implementation order for the SOP-01 slice:**
+1. Migration: enum additions (`corporate_kit`, `current_structure`, `completion_certificate`), new fields (`acknowledged_at`, `ghl_pipeline_stage`), new tables (`business_profile`, `email_templates`, `email_log`).
+2. Seed: 6 SOP-01 task templates + update Business Formation service price to $500.
+3. Admin UI: SOP-01 service card with third-party tracking, kit/certificate upload, send-email dialog.
+4. Email infrastructure: Resend integration via Edge Function + first template seeded.
+5. Client UI: portal section for requested-docs / questionnaire / kit downloads / Acknowledge button.
+6. Smoke test end-to-end on dev Supabase.
 
-After Phase 1b SOP-01 ships, the next SOP is most likely **SOP-03 (accounting, recurring)** — first recurring service, will surface monthly-cadence mechanics. Or move to **Phase 2 (GHL bridge)** if Karen wants the GHL connection live before adding more services.
+**Open scope question for Javi:** §6.2 (closure certificate) — recommended starting with **manual upload** (Abner fills a Word/PDF template and uploads); auto-PDF-generation deferred to v1.5 unless Abner pushes back. Confirm or override before implementation.
+
+**Parallel track (whenever Javi is ready):** smoke-test the existing SOP-00 flow end-to-end on dev Supabase to catch any wiring bugs before SOP-01 stacks on top.
+
+After Phase 1b SOP-01 ships, next slice is most likely **SOP-03 (accounting, recurring)** — first recurring service, will surface monthly-cadence mechanics. Or move to **Phase 2 (GHL bridge)** if Karen wants the GHL connection live before adding more services.

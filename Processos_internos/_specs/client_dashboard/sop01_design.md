@@ -1,20 +1,37 @@
 # SOP-01 Business Formation & Structure — Dashboard Design
 
-**Status:** Drafting questions for Abner. **No code yet** — implementation starts after answers are captured below.
+**Status:** Design **LOCKED** as of 2026-04-29 with Abner. Karen still needed for GHL §7. Implementation can start.
 **Reference:** `Processos_internos/01_formacion_empresarial/sop.md`
 **Pipeline (GHL):** `Business Formation & Structure`
 **Last updated:** 2026-04-29
 
 ---
 
+## Quick reference — what we're building
+
+| Area | Decision |
+|------|----------|
+| Activation | Two paths: from SOP-00 discovery, or as standalone request from existing client |
+| Step 1 intake | Free-form document upload — no fixed checklist |
+| Step 1 (no existing entity) | Short questionnaire form for clients forming from scratch |
+| Internal evaluation | Not recorded in dashboard — Abner does this in his head **(pain point logged)** |
+| Law firm comms | Email, same firm every time, ~5–10 business days turnaround |
+| Corporate kit | Multiple files (articles + bylaws/op.agreement + stock ledger + initial resolutions + EIN letter) |
+| Kit storage | Supabase Storage (dashboard is source of truth); Drive optional copy |
+| Delivery email | Dashboard sends a template Abner edits before sending — **new infrastructure needed** |
+| Closure | Client clicks "Acknowledge" in portal → service closes |
+| Closure artifact | Formal completion certificate (signed/branded) — **needs generation or template** |
+| Pricing | Standard $500 USD, billed upfront before law firm work starts |
+| GHL pipeline | Stages and custom fields → still to confirm with Karen |
+
+---
+
 ## How to use this doc
 
-1. Javi reviews the questions below.
-2. Javi takes them to **Abner** (sole runner of SOP-01) — async (email) or in a 30-min sync.
-3. Each answer is captured inline below, with the date and Abner's confirmation.
-4. Once every "OPEN" item flips to "ANSWERED," we start implementation.
-
-The questions are written so Abner can react to a default proposal rather than answer open-ended — faster and produces sharper decisions. Each item: **proposed default** + **what we'd build if confirmed** + **what changes if not.**
+1. ✅ Javi takes questions to Abner (verbal sync 2026-04-29 — done).
+2. ✅ Answers captured below + in Decision log at the bottom.
+3. Karen still needs to answer §7 (GHL); doesn't block implementation, only Phase 2 wiring.
+4. Implementation starts next session.
 
 ---
 
@@ -22,243 +39,267 @@ The questions are written so Abner can react to a default proposal rather than a
 
 ### 1.1 How does Abner know a client needs SOP-01?
 
-**Default proposal:** Two paths, both supported.
+**Decision:** **C — both paths supported.**
 - **(a) From onboarding (SOP-00):** during the discovery session, if the client lacks a corporate structure or wants to restructure, Abner activates "Business Formation & Structure" service in `AdminClientDetail → Services`.
 - **(b) Standalone request:** an existing active client emails or calls Abner asking to restructure → Abner activates the service the same way.
 
-**If confirmed:** no new UI — reuses the existing service-activation flow built in Phase 1.
-**If different:** we may need a "Request this service" client-side action, or a separate intake flow for prospects who only want SOP-01 (not full onboarding).
+**Build implication:** No new UI — reuses existing service-activation flow built in Phase 1.
 
-**Status:** OPEN
+**Status:** ✅ ANSWERED — Abner, 2026-04-29
 
 ---
 
 ## 2. Step 1 — Current structure intake
 
-The SOP says: *"Abner solicita al cliente que envíe su estructura de entidad actual."* This is vague; the dashboard needs to capture **what** the client sends.
+### 2.1 What documents does the client send?
 
-### 2.1 What documents does the client typically send?
+**Decision:** **B — free-form upload, no fixed checklist.** Client uploads whatever they have; admin sees what came in. No mandatory document list.
 
-**Default proposal:** Three categories, all uploaded by client to a "Current structure" section in their portal:
-- Articles of incorporation / formation documents (PDF)
-- Operating agreement or bylaws (PDF)
-- Recent IRS letter showing EIN (PDF or image)
-- Optional: prior tax returns (last 1–2 years), if they're forming a holding for an existing entity
+**Build implication:** Add a "current structure documents" request action that reuses the existing client-document-upload UX. New document category `current_structure` (or reuse generic `legal`). Admin requests → client sees an actionable card on their dashboard until upload → no validation on file count or types.
 
-**If confirmed:** Build a "Document request" UX — admin requests these specific document types; client sees a checklist on their portal until uploaded.
-**If different:** Abner specifies the exact list; we adjust the request template.
-
-**Status:** OPEN
+**Status:** ✅ ANSWERED — Abner, 2026-04-29
 
 ### 2.2 What if the client doesn't have a current structure (forming from scratch)?
 
-**Default proposal:** Then Step 1 collapses to a short questionnaire — no docs to upload. Form fields:
+**Decision:** **A — short questionnaire form.**
+
+**Form fields (locked):**
 - Owner(s) and ownership %
 - State of operation
-- Type of business (LLC / C-Corp / S-Corp / etc. — preference, if any)
+- Type of business preference (LLC / C-Corp / S-Corp / undecided)
 - Industry
 - Anticipated revenue / employees in year 1
 
-**If confirmed:** Build a small "Business profile" form for the client to complete instead of upload.
-**If different:** Abner gives us the right questionnaire fields, OR we just tell the client "send Abner an email" and handle it outside the dashboard for v1.
+**Build implication:** New `business_profile` table (or JSON column on `client_services`) capturing this for clients who selected "form from scratch" at activation. Form is shown in client portal as part of Step 1 instead of (or alongside) document upload.
 
-**Status:** OPEN
+**Status:** ✅ ANSWERED — Abner, 2026-04-29
 
 ---
 
 ## 3. Step 2 — Evaluation & design (internal)
 
-The SOP says: *"Abner evalúa la situación y determina cuál sería la estructura más eficiente."* This is internal-only (client doesn't see it).
+### 3.1 Does Abner record the evaluation?
 
-### 3.1 Does Abner record the evaluation in any structured way?
+**Decision:** **C — no record.** Abner evaluates mentally; nothing captured in the dashboard.
 
-**Default proposal:** A free-form internal notes field on the SOP-01 service record in the dashboard. Just a textarea labeled "Structure evaluation — internal." Captures Abner's analysis before law-firm coordination.
+**Build implication:** The "Evaluate and design new structure" task is just a checkbox the admin marks done. No notes field, no captured artifact for this step.
 
-**If confirmed:** Add a `service_notes` table or an `internal_notes` text field on `client_services`; only admins see it.
-**If different (e.g., Abner uses a structured framework):** we capture the framework as fields. Or if Abner does this entirely outside the dashboard, we skip and just track "evaluation done" as a task checkbox.
+**🚨 Pain point logged** to `Processos_internos/pain_points.md` — the rationale for a structure recommendation is not preserved anywhere. If Abner is unavailable, the reasoning behind a client's structure is gone. Suggested mitigation in pain-points doc.
 
-**Status:** OPEN
+**Status:** ✅ ANSWERED — Abner, 2026-04-29
 
 ---
 
 ## 4. Step 3 — Law firm coordination (third-party)
 
-This is the most ambiguous step. The SOP says Abner works with the law firm; the dashboard needs to show **status without exposing the firm to the client.**
+### 4.1 How does Abner communicate with the law firm?
 
-### 4.1 How does Abner currently communicate with the law firm?
+**Decision:** **A — email.**
 
-**Default assumption:** email — Abner emails the firm with the client's structure info; firm replies with the new structure document. No shared portal.
-
-**If confirmed:** dashboard tracks this as an internal-only task with fields:
-- Firm name (preset to the standard firm)
+**Build implication:** Internal-only task with fields:
+- Firm name (preset to the standing firm)
 - Brief sent on (date)
 - Last contact (date)
 - Next-touch deadline (date)
 - Outcome / received-on (date + uploaded artifact)
 
-**If different (e.g., they use a shared Drive folder, or the firm has its own portal):** we may need to add a link/reference field, or skip dashboard tracking entirely for this step.
+No portal/integration with the firm. Just admin-side tracking.
 
-**Status:** OPEN
+**Status:** ✅ ANSWERED — Abner, 2026-04-29
 
 ### 4.2 Is the law firm always the same one?
 
-**Default assumption:** yes — single standing relationship, name is internal info.
+**Decision:** **A — single standing relationship.**
 
-**If confirmed:** firm name is hardcoded in admin views; client never sees it.
-**If different:** add a `legal_partners` lookup table.
+**Build implication:** Firm name hardcoded in admin views (or stored in a settings table); client never sees it. No `legal_partners` lookup table needed for v1.
 
-**Status:** OPEN
+**Status:** ✅ ANSWERED — Abner, 2026-04-29
 
-### 4.3 What's the typical turnaround time the law firm gives?
+### 4.3 Typical law firm turnaround?
 
-**Why we need this:** to set the default due-date offset on the "Coordinate with law firm" task and to flag overdue cases.
+**Decision:** **B — 5–10 business days.**
 
-**Status:** OPEN — Abner gives a number of business days.
+**Build implication:** `service_task_templates.default_due_offset_days = 10` for the "Coordinate with law firm" task (gives a buffer at the long end). Tasks past due flag yellow/red.
+
+**Status:** ✅ ANSWERED — Abner, 2026-04-29
 
 ---
 
 ## 5. Step 4 — Corporate kit delivery
 
-The SOP says: *"Abner entrega al cliente un corporate kit con toda la documentación de la nueva estructura empresarial."*
+### 5.1 What's inside a corporate kit?
 
-### 5.1 What goes inside a corporate kit?
+**Decision:** **A — full standard package.** Articles + bylaws/operating agreement + stock ledger + initial resolutions + EIN letter.
 
-**Default assumption (based on SGS glossary + general practice):**
-- Articles of incorporation/formation (filed with the state)
-- Bylaws or operating agreement
-- Stock/membership ledger
-- Initial resolutions
-- EIN confirmation letter
-- Optional: stock certificates (if C-Corp)
+**Build implication:** Five expected document subtypes inside the `corporate_kit` category. Admin uploads each; client portal lists them under "Corporate Kit" section, grouped by type.
 
-**Why we need this:** to know what document categories to surface in the client portal, and whether the kit is one bundled PDF or multiple files.
+**Status:** ✅ ANSWERED — Abner, 2026-04-29
 
-**Status:** OPEN
+### 5.2 Bundled or multiple files?
 
-### 5.2 One bundled PDF, or multiple files?
+**Decision:** **A — multiple separate files.**
 
-**Default proposal:** Multiple files, surfaced in the client portal under a "Corporate Kit" section grouped by document type. A bundled PDF is also fine — admin uploads it to the same section, client sees it as a single deliverable.
+**Build implication:** No special bundling. Each kit document is a separate `documents` row with category `corporate_kit`; client portal shows them as a list/grid.
 
-**If confirmed:** No special UX — just a `corporate_kit` document category; staff uploads however many files they have.
-**If different:** Abner tells us the format Abner uses today.
+**Status:** ✅ ANSWERED — Abner, 2026-04-29
 
-**Status:** OPEN
+### 5.3 Storage location going forward?
 
-### 5.3 Where are kits stored today, and where should they live going forward?
+**Decision:** **A — Supabase Storage (dashboard is source of truth).** Google Drive is optional secondary.
 
-**Per Processos_internos `_reference/tools.md`:** Google Drive is current document storage. The dashboard uses Supabase Storage (`client-documents` bucket).
+**Build implication:** Use existing `client-documents` Supabase Storage bucket. New document category `corporate_kit` added to `document_category` enum (migration needed). No `external_url` field needed.
 
-**Default proposal:** Going forward, kits live in Supabase. Admin uploads via dashboard; client downloads via portal. Drive copies are optional but no longer the source of truth.
+**Status:** ✅ ANSWERED — Abner, 2026-04-29
 
-**If different:** Karen / Abner may want the source of truth to stay in Drive (with the dashboard storing only a Drive link). We can support that with a `external_url` field on documents.
+### 5.4 Does the dashboard send the personalized email?
 
-**Status:** OPEN
+**Decision:** **B — yes, dashboard has an email template Abner edits and sends.**
 
-### 5.4 The personalized email — does the dashboard send it?
+**Build implication (significant — new infrastructure):**
+- New table `email_templates` with rows for each templated email type (start with `sop01_kit_delivery`).
+- Edge Function `send-templated-email` that takes a template + variables + recipient and sends via an email provider (Resend recommended — free tier, simplest setup).
+- Admin UI: "Send kit delivery email" button on the SOP-01 service card → opens a dialog with the template body pre-filled (variables substituted), Abner edits, clicks Send.
+- Track sends in a new `email_log` table or as `documents` rows with category `email_log`.
 
-The SOP explicitly mentions a "correo personalizado." Two options:
+**Scope flag:** This is non-trivial. Recommendation: build it as a reusable component since other SOPs will want it too. ~1.5 sessions estimated.
 
-- **(a) Dashboard sends it:** template + admin-edited body, dashboard handles delivery.
-- **(b) Dashboard tracks "email sent" as an action:** admin sends the email from Gmail/whatever they normally use, then marks "email sent" in the dashboard. Email body lives outside.
-
-**Default proposal:** (b) for v1 — too much tooling to build (a) just for one email type. When we build the broader notifications/email-templates feature later (Phase 3 area), (a) becomes available everywhere.
-
-**If different:** Abner wants (a) and we prioritize email templating sooner.
-
-**Status:** OPEN
+**Status:** ✅ ANSWERED — Abner, 2026-04-29
 
 ---
 
 ## 6. Step 5 — Closure
 
-The SOP says: *"Una vez que el cliente confirma haber recibido y entendido la nueva estructura, se cierra el servicio."*
+### 6.1 How does the client confirm receipt?
 
-### 6.1 How does the client confirm understanding?
+**Decision:** **A — "Acknowledge" button in the client portal.**
 
-**Default proposal:** A simple "Acknowledge receipt" button in the client portal next to the corporate kit. Clicking it timestamps the acknowledgment + flips the service status to closed.
+**Build implication:**
+- New field `client_services.acknowledged_at TIMESTAMPTZ` (migration needed).
+- Client portal: SOP-01 service card shows an "Acknowledge & close" button when status is "delivered, awaiting acknowledgment."
+- Click → confirmation dialog → timestamp saved, service status flips to closed.
+- Admin sees the status change in real time.
 
-**If confirmed:** New `client_services.acknowledged_at` field; closure is two-sided (client clicks, admin sees the status change).
-**If different (e.g., Abner wants a phone-call confirmation):** the closure stays admin-driven — admin marks closed after talking to the client.
+**Status:** ✅ ANSWERED — Abner, 2026-04-29
 
-**Status:** OPEN
+### 6.2 Closure artifact?
 
-### 6.2 Is there an artifact at closure (signed acknowledgment, certificate)?
+**Decision:** **B — formal completion certificate (signed/branded).**
 
-**Default assumption:** No. Closure is just a status change.
+**Build implication (significant — new infrastructure):**
+- A branded certificate document is produced and shared with the client at closure.
+- **v1 simple path:** Pre-made certificate template (Word/PDF) that Abner fills out manually and uploads as a `documents` row with new category `completion_certificate`. The "Acknowledge" button in §6.1 only appears once Abner has uploaded the certificate.
+- **v1.5 path:** Auto-generate the certificate PDF from a template + client metadata + Abner's signature image. Defer to v1.5 unless Abner wants it now.
 
-**If different:** if Abner wants a closure receipt PDF generated, we add that as a separate doc.
+**Recommendation:** Start with v1 simple path (manual upload). Move to auto-gen if it becomes a bottleneck.
 
-**Status:** OPEN
+**Status:** ✅ ANSWERED — Abner, 2026-04-29 (v1 manual / v1.5 auto-gen split is a Claude proposal — confirm with user)
 
 ---
 
-## 7. GHL pipeline mapping
+## 7. GHL pipeline mapping — STILL OPEN (Karen)
 
-Karen needs the dashboard to keep GHL in sync. SOP-01 maps to the GHL pipeline `Business Formation & Structure`.
+### 7.1 GHL pipeline stages?
 
-### 7.1 What are the stages of that GHL pipeline?
+**Status:** ⏳ OPEN — pending Karen.
 
-**Default proposal (placeholder — Karen confirms):**
+**Working assumption (placeholder):**
 1. New request received
-2. Awaiting client structure docs
+2. Awaiting client structure docs (or questionnaire)
 3. Evaluating structure
 4. With law firm
-5. Kit delivered
-6. Closed
+5. Kit uploaded
+6. Email sent / awaiting acknowledgment
+7. Closed
 
-**Why we need this:** the dashboard needs to know which task-completions map to which pipeline stage advances. Phase 2 (GHL bridge) will wire the actual webhooks; Phase 1b only needs the *mapping table*.
+**Build implication:** Phase 1b implementation leaves a `ghl_pipeline_stage TEXT` field on `client_services` and emits stage-change events ready for Phase 2 webhook wiring. Once Karen confirms stages, we map them.
 
-**Status:** OPEN — needs **Karen** to share the actual GHL stages.
+### 7.2 GHL custom fields?
 
-### 7.2 What custom fields on the GHL contact reflect SOP-01 state?
-
-**Default assumption:** None today, beyond the pipeline stage. Karen would create custom fields if/when we wire the bridge.
-
-**Status:** OPEN — Karen confirms or specifies fields.
+**Status:** ⏳ OPEN — pending Karen. **Build implication:** No fields needed unless Karen specifies. Pipeline stage alone is enough for Phase 1b.
 
 ---
 
 ## 8. Pricing & billing
 
-### 8.1 Is SOP-01 priced per case or fixed?
+### 8.1 Standard or per-case price?
 
-The team-level pricing model says recurring services are $5,000/month and one-time services are case-by-case (Abner sets the price). SOP-01 is one-time.
+**Decision:** **B — standard fixed $500 USD.**
 
-**Default proposal:** Admin enters the agreed price when activating the service for a client. Dashboard generates an invoice line item; payment uses the same Stripe-link flow as SOP-00.
+**Build implication:** Update `services` row for "Business Formation & Structure" with `base_price = 500.00`. Activation auto-creates an invoice with this amount as default; admin can override per case.
 
-**If different:** Abner has a standard price; we set a default `services.base_price`.
-
-**Status:** OPEN
+**Status:** ✅ ANSWERED — Abner, 2026-04-29
 
 ### 8.2 When is SOP-01 billed?
 
-**Default proposal:** Upfront — invoice generated on service activation; client must pay before the law-firm coordination kicks off.
+**Decision:** **A — upfront. Invoice at activation, payment before law firm work starts.**
 
-**If different:** 50/50 (activation + delivery), or net-30 after delivery.
+**Build implication:**
+- On service activation, dashboard auto-generates an invoice (status: `sent`) with the $500 line item.
+- The "Coordinate with law firm" task is **gated** — admin cannot mark it active until `invoices.status = 'paid'` for the related invoice.
+- Visual: gating shown as a lock icon + tooltip "Awaiting payment" on the task.
 
-**Status:** OPEN
+**Status:** ✅ ANSWERED — Abner, 2026-04-29
 
 ---
 
-## 9. Implementation summary (filled in after answers)
+## 9. Implementation summary (locked)
 
-Once questions above are resolved, this section captures what we're building:
+### v1 (this slice — ~2–4 sessions)
 
-- New `service_task_templates` rows for SOP-01 (5–6 tasks per the slice steps)
-- (Optional) `internal_notes` field on `client_services` if §3.1 confirms internal-notes UI
-- (Optional) `acknowledged_at` field on `client_services` if §6.1 confirms client acknowledgment
-- (Optional) Document category `corporate_kit` if §5.2 confirms grouped delivery
-- (Optional) `external_url` on documents if §5.3 keeps Drive as source of truth
-- Admin UI: SOP-01 service card on `AdminClientDetail` with status, internal notes, third-party-tracking fields
-- Client UI: portal section showing requested documents (Step 1) → kit deliverables (Step 4) → acknowledgment button (Step 5)
-- GHL pipeline mapping table (per §7.1)
+**Database changes (one migration):**
+- Add `corporate_kit`, `current_structure`, `completion_certificate` values to `document_category` enum.
+- Add `acknowledged_at TIMESTAMPTZ` to `client_services`.
+- Add `ghl_pipeline_stage TEXT` to `client_services` (placeholder for Phase 2).
+- New `business_profile` table (or JSONB column on `client_services`) for §2.2 questionnaire.
+- New `email_templates` table.
+- New `email_log` table (for §5.4 tracking).
+- Update `services` row: "Business Formation & Structure" price = $500.
+- Seed `service_task_templates` for SOP-01 (6 tasks below).
+
+**SOP-01 task templates (seeded into `service_task_templates`):**
+1. *Request current structure docs (or questionnaire)* — high priority, due +1d
+2. *Confirm payment received* — high, gates step 3 — due +3d
+3. *Evaluate structure & coordinate with law firm* — high, due +5d
+4. *Track law firm response* — medium, due +14d
+5. *Upload corporate kit + send delivery email* — high, due +16d
+6. *Upload completion certificate + await client acknowledgment* — medium, due +18d
+
+**UI work:**
+- Admin: SOP-01 service card on `AdminClientDetail` with status, third-party-tracking fields (firm name, sent/received dates), kit upload section, certificate upload, "Send kit email" button (opens template dialog).
+- Client: portal section showing requested documents → questionnaire form (if applicable) → kit downloads → "Acknowledge" button.
+- Reusable: `RequestDocuments` admin action, `DeliverableSection` client component, `SendTemplatedEmail` dialog.
+
+**Email infrastructure (new):**
+- Resend integration via Supabase Edge Function.
+- One template seeded: `sop01_kit_delivery`.
+- API to send templated emails reused by future SOPs.
+
+### v1.5 (deferred — proposed but not locked)
+
+- Auto-generate completion certificate PDF from template + client data.
+- Variable substitution in email templates (richer than v1).
+- GHL webhook integration (this is Phase 2 anyway).
 
 ---
 
 ## Decision log
 
-(append answers here as Abner / Karen respond — date + decider + verbatim answer + which question it resolves)
-
-| Date | Question # | Decider | Answer |
-|------|------------|---------|--------|
-|      |            |         |        |
+| Date | Section | Decider | Answer (verbatim from Abner verbal sync) |
+|------|---------|---------|------------------------------------------|
+| 2026-04-29 | §1.1 | Abner | Both paths — onboarding and standalone request |
+| 2026-04-29 | §2.1 | Abner | Free-form upload, no checklist |
+| 2026-04-29 | §2.2 | Abner | Short questionnaire for new companies |
+| 2026-04-29 | §3.1 | Abner | No record — evaluation done mentally |
+| 2026-04-29 | §4.1 | Abner | Email |
+| 2026-04-29 | §4.2 | Abner | Always same firm |
+| 2026-04-29 | §4.3 | Abner | 5–10 business days |
+| 2026-04-29 | §5.1 | Abner | Full standard package (5 docs) |
+| 2026-04-29 | §5.2 | Abner | Multiple separate files |
+| 2026-04-29 | §5.3 | Abner | Supabase Storage; Drive optional |
+| 2026-04-29 | §5.4 | Abner | Yes, dashboard sends with editable template |
+| 2026-04-29 | §6.1 | Abner | Acknowledge button in client portal |
+| 2026-04-29 | §6.2 | Abner | Formal completion certificate (signed/branded) |
+| 2026-04-29 | §8.1 | Abner | $500 standard fixed price |
+| 2026-04-29 | §8.2 | Abner | Upfront, before law firm work |
+| TBD | §7.1 | Karen | _pending_ |
+| TBD | §7.2 | Karen | _pending_ |

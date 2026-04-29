@@ -59,6 +59,13 @@ Registro vivo de puntos de fricción identificados en los procesos internos de S
 - **Detectado:** 2026-04-26
 - **Estado:** abierto
 
+### [SOP-01] La evaluación de estructura no queda registrada
+- **Observación:** En el Paso 2 de SOP-01, Abner evalúa la estructura actual del cliente y diseña la nueva — pero esta evaluación se hace mentalmente y no se registra en ningún sistema (confirmado en sesión de diseño 2026-04-29 al levantar requisitos del dashboard). La justificación de "por qué esta estructura es la correcta para este cliente" se pierde al cerrar el servicio. Si en el futuro un miembro del equipo (Germain, Karen, o un sucesor de Abner) necesita revisar la decisión, no hay traza.
+- **Severidad:** alta
+- **Mejora sugerida:** (1) Agregar al menos un campo "Razonamiento de estructura" en la ficha del servicio en el dashboard, que Abner llena con 2–3 líneas antes de cerrar el Paso 2. (2) Hacerlo obligatorio para avanzar al Paso 3 (coordinación con firma legal). (3) Largo plazo: estructura más rica con campos como "estructura previa," "estructura recomendada," "razones fiscales," "razones de control," etc.
+- **Detectado:** 2026-04-29
+- **Estado:** abierto
+
 ---
 
 ---
