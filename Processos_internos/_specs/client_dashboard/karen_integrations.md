@@ -235,8 +235,8 @@ npx supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_xxx
 
 ### Estado actual
 
-- El dashboard tiene una tabla `discovery_sessions` (con campo `kind` para distinguir tipo de reunión) que captura las reuniones cuando un admin las loggea **manualmente**.
-- **No hay integración con Calendly todavía.** Ese es el último pedazo del slice de SOP-03 que está pendiente.
+- El dashboard tiene una tabla `discovery_sessions` (con campo `kind` para distinguir tipo de reunión) que captura las reuniones cuando un admin las loggea manualmente.
+- **Edge Function `calendly-webhook` ya construida** (2026-04-30, `supabase/functions/calendly-webhook/index.ts`). Recibe `invitee.created`, identifica al cliente por email, crea automáticamente la fila en `discovery_sessions`. Idempotente: si Calendly reintenta el mismo evento no duplica. Falta solamente: que vos hagas el setup en Calendly (cuenta + event types + webhook subscription) y que configuremos el secret en Supabase.
 
 ### Plan
 
@@ -249,7 +249,8 @@ npx supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_xxx
    - URL: `https://<tu-project-ref>.supabase.co/functions/v1/calendly-webhook`
    - Eventos: `invitee.created` (cuando alguien agenda)
    - Header de autenticación: `Authorization: Bearer <CALENDLY_WEBHOOK_SECRET>` para validar
-4. **Edge Function** (a construir Javi en próxima sesión): recibe el evento, identifica al cliente por email, crea fila en `discovery_sessions` con `kind` correspondiente.
+4. **Edge Function `calendly-webhook`** (ya construida): identifica al cliente por email (case-insensitive contra `clients.email`), determina el `kind` por palabras clave en el nombre del event type ("mensual" → `monthly_accounting`, "discovery" → `discovery`, "asesoría" / "checkin" → `advisory_checkin`, default `discovery` con warning en logs), e inserta la fila en `discovery_sessions`. Si el email del invitee no matchea ningún cliente, devuelve 200 OK pero loggea el caso para revisión.
+   - **Deploy:** `npx supabase functions deploy calendly-webhook` (Javi en su Supabase de dev; cuando pasemos a producción, lo corrés vos contra el proyecto de SGS).
 5. **Embed del Calendly** en el portal del cliente: el cliente puede agendar desde adentro del portal sin salir.
 
 ### Variables de entorno necesarias

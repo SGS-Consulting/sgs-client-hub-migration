@@ -1,1 +1,9 @@
 project_id = "ezccdcxncsivsqtbgcyv"
+
+# Edge Function: calendly-webhook
+# Public endpoint that receives Calendly's invitee.created webhook.
+# JWT verification is disabled so Calendly (an external service that
+# can't issue Supabase JWTs) can POST to it. The function does its own
+# auth via Authorization: Bearer <CALENDLY_WEBHOOK_SECRET>.
+[functions.calendly-webhook]
+verify_jwt = false
