@@ -235,30 +235,37 @@ Aim: each SOP slice ~1–3 sessions. If a slice balloons past that, peel out a s
 - [x] **2026-04-29** — **SOP-03 service cards** (admin: QB checkbox + cadence picker + status pills; client: cadence-aware quarterly/semi-annual reports section + IUL review section + pending-questions banner).
 - [x] **2026-04-29** — **SOP-03 cron schedulers** (migration `20260429205220`): `spawn_recurring_tasks()` daily 05:00 UTC + `flag_overdue_queries()` daily 06:00 UTC. Smoke-tested manually — 3 tasks correctly spawned. pg_cron extension enabled.
 - [x] **2026-04-29** — **Legacy services deactivated** (Bookkeeping Monthly, Tax Filing Federal/State) since they overlap with SOP-03/SOP-04 services. `dev_seed.sql` updated to seed them as inactive going forward.
+- [x] **2026-04-30** — **SOP-03 Calendly webhook shipped & deployed.** Edge Function `calendly-webhook` (`supabase/functions/calendly-webhook/index.ts`) receives `invitee.created`, validates `Authorization: Bearer <secret>`, matches invitee email to client (case-insensitive via escaped ilike), picks `kind` from event-type-name keywords (`mensual` → `monthly_accounting`, `discovery` → `discovery`, `asesoría`/`checkin` → `advisory_checkin`, fallback `discovery` with warning). Idempotent via partial unique index on `discovery_sessions.calendly_event_id` (migration `20260430164930`). `verify_jwt = false` in `supabase/config.toml` (no JWT, no `apikey` header needed). Smoke-tested 10 scenarios on dev Supabase — all green. Awaits Karen's Calendly setup (event types + webhook subscription + production secret) per `karen_integrations.md` §5. **SOP-03 v1 dashboard-side feature-complete.**
+- [x] **2026-04-30** — **SOP-04 design pre-draft.** `sop04_design.md` written. Two hard blockers flagged at top: worker classification policy (Abner — already in `_meetings/open_questions.md`) and SOP-03/SOP-04 tax-season boundary (Germain + Abner — already in `pain_points.md`). 8 design questions for Germain in §2–§11 with concrete default proposals; 2 for Karen on GHL. Heavy reuse from SOP-03 (recurring tasks, queries, email_log, internal-only meetings); net new entities proposed: `client_workers`, `tax_strategies` (+ smaller `worker_classification_responses`, `tax_filings`). One-time variant §8 explicitly blocked until cross-SOP boundary resolves.
+- [x] **2026-04-30** — **6 Claude Code subagents added** under `.claude/agents/`: `sop-reader`, `migration-author`, `schema-explorer`, `ui-ux`, `integration-tracker`, `bug-triager`. Project-scoped specialists for context-saving on recurring workflows (Spanish SOP summarization, migration drafting, schema investigation, UI build/review, external-integration tracking, bug triage without edits).
 
 ---
 
 ## Next concrete step
 
-**SOP-03 v1 effectively complete except the Calendly webhook.** Schema, seed, admin/client UI, query workflow, recurring-task scheduler, and overdue-query flagger all shipped + tested 2026-04-29. The webhook is the last piece (~1 session) and enables self-scheduled monthly meetings — also reusable for SOP-00 discovery and SOP-07 advisory check-ins later.
+**SOP-03 v1 is now feature-complete on the dashboard side.** Calendly webhook receiver shipped 2026-04-30 — needs only Karen's Calendly setup (event types + webhook subscription + production secret) to go live (per `karen_integrations.md` §5).
+
+**SOP-04 design pre-draft is in `sop04_design.md`** with 8 questions for Germain + cross-SOP-boundary blocker for Germain + Abner.
 
 **For next session, in priority order:**
 
-1. **Calendly webhook for self-scheduled meetings.** Edge Function receives `invitee.created`; matches the invitee email to a client; creates a `discovery_sessions` row with `kind='monthly_accounting'` (or `'discovery'` / `'advisory_checkin'` based on event-type metadata). This closes out the SOP-03 slice.
+1. **Javi syncs with Germain** (and looks for an Abner sync slot). Take to Germain: the 8 SOP-04 design questions in `sop04_design.md` §2–§11 + the still-pending SOP-03 tier dollar amounts. Take to Abner: SOP-04 worker classification policy (`_meetings/open_questions.md`) + SOP-03/SOP-04 tax-season boundary (`pain_points.md`).
 
-2. **Pre-draft SOP-04 (Tax & Compliance) design doc** — Germain runs this too, so Javi can take both SOP-04's questions and the unresolved SOP-03 items (tier dollar amounts + the SOP-03/SOP-04 boundary pain point) to him in one batch.
+2. **Once Germain's answers are back**, implement SOP-04 recurring service. Estimated 5–7 sessions per `sop04_design.md` §12. Most mechanics reuse SOP-03; net new is the `client_workers` table + `tax_strategies` table + per-worker classification capture.
 
-3. **Then implement SOP-04** — should reuse most of the SOP-03 mechanics (recurring tasks, client queries, document categories, service cards). Estimated 3-4 sessions because the foundation is now in place.
+3. **In parallel (unblocked):** smoke-test SOP-01 + SOP-03 end-to-end on dev Supabase to surface any wiring bugs before SOP-04 stacks on top. Optional but cheap insurance — listed in §Backlog already.
 
-4. **Eventually:** SOP-02 (Delaware), SOP-05/06/07 (Abner-led services), SOP-09 (Branding — needs lots of cross-team prep).
+4. **Eventually** (after SOP-04): SOP-02 (Delaware), SOP-05/06/07 (Abner-led services), SOP-09 (Branding — needs cross-team prep). Plus Phase 2 (GHL bridge) when Karen signals readiness.
 
 **Pending external inputs (not blocking next session):**
 | Who | What | Captured in |
 |-----|------|-------------|
 | Germain | SOP-03 tier dollar amounts | `sop03_design.md` §11 |
+| Germain | SOP-04 design questions (worker model, W-9 collection, 1099 gen, tax-strategy capture, etc.) | `sop04_design.md` §2–§11 |
 | Germain + Abner | SOP-03 vs. SOP-04 tax-season boundary | `pain_points.md` |
+| Abner | SOP-04 worker classification policy | `sop04_design.md` §2.1 + `_meetings/open_questions.md` |
 | Abner | Signature image (PNG) for SOP-01 PDF cert | `sop01_design.md` §6.2 |
-| Karen | Hosting (Vercel + CNAME); GHL pipeline mappings; Stripe + Calendly setup | **`karen_integrations.md`** ← single Spanish handoff doc |
+| Karen | Hosting (Vercel + CNAME); GHL pipeline mappings; Stripe setup; Calendly account+event-types+webhook+secret | **`karen_integrations.md`** ← single Spanish handoff doc |
 
 **Backlog (unblocked but lower-priority than SOP-04):**
 - PDF completion certificate auto-gen for SOP-01
