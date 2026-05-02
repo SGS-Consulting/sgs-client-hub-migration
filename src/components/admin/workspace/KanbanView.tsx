@@ -22,10 +22,12 @@ type Props = {
   tasks: Task[];
   assigneeName: (id: string | null) => string | null;
   onMove: (taskId: string, newColumnId: string) => void;
+  onAssignClick?: (taskId: string) => void;
 };
 
-export const KanbanView = ({ columns, tasks, assigneeName, onMove }: Props) => {
+export const KanbanView = ({ columns, tasks, assigneeName, onMove, onAssignClick }: Props) => {
   let draggedId: string | null = null;
+  let dragMoved = false;
 
   return (
     <div className="grid grid-flow-col auto-cols-[280px] gap-3 overflow-x-auto pb-4">
@@ -54,8 +56,10 @@ export const KanbanView = ({ columns, tasks, assigneeName, onMove }: Props) => {
                   <Card
                     key={task.id}
                     draggable
-                    onDragStart={() => { draggedId = task.id; }}
-                    className={cn("cursor-grab active:cursor-grabbing transition hover:shadow-md", overdue && "border-destructive/50")}
+                    onDragStart={() => { draggedId = task.id; dragMoved = false; }}
+                    onDrag={() => { dragMoved = true; }}
+                    onClick={() => { if (!dragMoved && onAssignClick) onAssignClick(task.id); }}
+                    className={cn("cursor-pointer transition hover:shadow-md hover:border-primary/40", overdue && "border-destructive/50")}
                   >
                     <CardContent className="p-3 space-y-2">
                       <div className="flex items-start justify-between gap-2">

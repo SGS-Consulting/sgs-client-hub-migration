@@ -7,3 +7,10 @@ project_id = "ezccdcxncsivsqtbgcyv"
 # auth via Authorization: Bearer <CALENDLY_WEBHOOK_SECRET>.
 [functions.calendly-webhook]
 verify_jwt = false
+
+# Edge Function: worker-w9
+# Public endpoint for the SOP-04 W-9 tokenized form. The worker (an external
+# party with no Supabase account) hits GET to fetch context and POST to submit
+# their structured W-9. Token-scoped — see supabase/functions/worker-w9/index.ts.
+[functions.worker-w9]
+verify_jwt = false

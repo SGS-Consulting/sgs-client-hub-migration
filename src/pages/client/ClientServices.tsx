@@ -49,6 +49,7 @@ const ClientServices = () => {
   const [catalog, setCatalog] = useState<any[]>([]);
   const [documents, setDocuments] = useState<ClientDocument[]>([]);
   const [openQueriesCount, setOpenQueriesCount] = useState(0);
+  const [activeStrategiesCount, setActiveStrategiesCount] = useState(0);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [acknowledgingId, setAcknowledgingId] = useState<string | null>(null);
   const [confirmAckFor, setConfirmAckFor] = useState<ClientService | null>(null);
@@ -77,6 +78,10 @@ const ClientServices = () => {
         "quarterly_report",
         "semi_annual_report",
         "annual_iul_review",
+        "delaware_formation_docs",
+        "corporate_address_confirmation",
+        "registered_agent_confirmation",
+        "gl_insurance_certificate",
       ])
       .order("created_at", { ascending: false });
     setDocuments((docs as ClientDocument[] | null) ?? []);
@@ -86,6 +91,9 @@ const ClientServices = () => {
       .eq("client_id", clientId)
       .neq("status", "answered");
     setOpenQueriesCount(count ?? 0);
+
+    const { data: stratCount } = await supabase.rpc("get_my_active_tax_strategies_count");
+    setActiveStrategiesCount(typeof stratCount === "number" ? stratCount : 0);
   };
 
   useEffect(() => {
@@ -444,6 +452,125 @@ const ClientServices = () => {
     );
   };
 
+  const renderSop02Card = (cs: ClientService) => {
+    // Group docs for this service by category, scoped to docs uploaded after the service started
+    const docsByCategory = (cats: string[]) =>
+      documents.filter(
+        (d) => cats.includes(d.category) && new Date(d.created_at) >= new Date(cs.started_at),
+      );
+    const formationDocs = docsByCategory(["delaware_formation_docs"]);
+    const addressDocs = docsByCategory(["corporate_address_confirmation"]);
+    const agentDocs = docsByCategory(["registered_agent_confirmation"]);
+    const insuranceDocs = docsByCategory(["gl_insurance_certificate"]);
+    const kitDocs = docsByCategory(["corporate_kit"]);
+
+    const isAcknowledged = !!cs.acknowledged_at;
+    const hasKit = kitDocs.length > 0;
+    const status: { label: string; tone: "in_progress" | "ready" | "closed" } = isAcknowledged
+      ? { label: `Closed on ${new Date(cs.acknowledged_at!).toLocaleDateString()}`, tone: "closed" }
+      : hasKit
+        ? { label: "Ready for your review", tone: "ready" }
+        : { label: "In progress — preparando tu infraestructura Delaware", tone: "in_progress" };
+
+    const Section = ({ title, docs }: { title: string; docs: ClientDocument[] }) => (
+      <div className="space-y-2">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>
+        {docs.length === 0 ? (
+          <p className="text-xs text-muted-foreground">Aún no disponible.</p>
+        ) : (
+          <ul className="space-y-1">
+            {docs.map((d) => (
+              <li key={d.id} className="flex items-center justify-between gap-2 rounded-md border bg-card px-3 py-2">
+                <span className="flex items-center gap-2 truncate">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <span className="truncate">{d.file_name}</span>
+                </span>
+                <Button variant="ghost" size="sm" onClick={() => downloadDocument(d)} disabled={downloadingId === d.id}>
+                  {downloadingId === d.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    );
+
+    return (
+      <Card key={cs.id} className="border-primary/50 md:col-span-2">
+        <CardHeader>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <CardTitle className="text-base">{cs.services?.name}</CardTitle>
+              <CardDescription>{cs.services?.category}</CardDescription>
+            </div>
+            <Badge variant={status.tone === "closed" ? "secondary" : status.tone === "ready" ? "default" : "outline"}>
+              {status.label}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm">
+          {cs.services?.description && <p className="text-muted-foreground">{cs.services.description}</p>}
+          <Section title="Delaware Formation Docs" docs={formationDocs} />
+          <Section title="Corporate Address" docs={addressDocs} />
+          <Section title="Registered Agent" docs={agentDocs} />
+          <Section title="GL Insurance Certificate" docs={insuranceDocs} />
+          <Section title="Corporate Kit" docs={kitDocs} />
+
+          {hasKit && !isAcknowledged && (
+            <div className="pt-2 border-t">
+              <p className="text-xs text-muted-foreground mb-3">
+                Cuando hayas revisado todo y te sientas cómodo con la infraestructura Delaware, hacé click acá para cerrar formalmente la entrega.
+              </p>
+              <Button onClick={() => setConfirmAckFor(cs)} disabled={acknowledgingId === cs.id}>
+                {acknowledgingId === cs.id ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
+                Acknowledge & close
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderSop04Card = (cs: ClientService) => {
+    const status = cs.is_active
+      ? { label: "Activo", tone: "default" as const }
+      : { label: "Cerrado", tone: "secondary" as const };
+
+    return (
+      <Card key={cs.id} className="border-primary/50 md:col-span-2">
+        <CardHeader>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <CardTitle className="text-base">{cs.services?.name}</CardTitle>
+              <CardDescription>{cs.services?.category}</CardDescription>
+            </div>
+            <Badge variant={status.tone}>{status.label}</Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm">
+          {cs.services?.description && (
+            <p className="text-muted-foreground">{cs.services.description}</p>
+          )}
+
+          <div className="rounded-md border bg-muted/40 px-3 py-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+              Estrategia fiscal
+            </p>
+            <p className="text-sm">
+              <strong>{activeStrategiesCount}</strong>{" "}
+              {activeStrategiesCount === 1 ? "estrategia activa" : "estrategias activas"} para tu empresa.
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              SGS revisa tu estrategia fiscal trimestralmente. El detalle de cada estrategia es interno; si querés
+              repasarlo, agendá una llamada con tu equipo de SGS.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
   const renderGenericCard = (cs: ClientService) => (
     <Card key={cs.id} className="border-primary/50">
       <CardHeader>
@@ -466,7 +593,10 @@ const ClientServices = () => {
   // the main "active" grid. For now, "active or recently acknowledged"
   // shows in the same panel.
   const visibleActive = active.filter(
-    (a) => a.is_active || a.services?.name === "Business Formation & Structure",
+    (a) =>
+      a.is_active ||
+      a.services?.name === "Business Formation & Structure" ||
+      a.services?.name === "Delaware Infrastructure Platform",
   );
 
   return (
@@ -487,8 +617,10 @@ const ClientServices = () => {
             {visibleActive.map((cs) => {
               const name = cs.services?.name ?? "";
               if (name === "Business Formation & Structure") return renderSop01Card(cs);
+              if (name === "Delaware Infrastructure Platform") return renderSop02Card(cs);
               if (name.startsWith("Managed Accounting") || name === "Tax-Season Bookkeeping (One-Time)")
                 return renderSop03Card(cs);
+              if (name === "Tax & Compliance Strategy") return renderSop04Card(cs);
               return renderGenericCard(cs);
             })}
           </div>

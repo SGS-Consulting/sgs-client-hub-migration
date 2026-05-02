@@ -14,6 +14,11 @@ import { ArrowLeft, Save, Plus, Upload, Mail, Copy, Receipt, Send, Settings } fr
 import { StatusBadge, INVOICE_STATUSES, DOCUMENT_STATUSES, TASK_STATUSES } from "@/lib/status";
 import { SendTemplatedEmailDialog } from "@/components/admin/SendTemplatedEmailDialog";
 import { Sop03ServiceConfigDialog } from "@/components/admin/Sop03ServiceConfigDialog";
+import { AdminWorkersTab } from "@/components/admin/AdminWorkersTab";
+import { AdminTaxStrategyTab } from "@/components/admin/AdminTaxStrategyTab";
+import { AdminWorkspaceTab } from "@/components/admin/AdminWorkspaceTab";
+import { useAuth } from "@/contexts/AuthContext";
+import { can } from "@/lib/permissions";
 import { toast } from "sonner";
 
 type DiscoverySession = {
@@ -39,6 +44,10 @@ const DOC_CATEGORIES: { value: string; label: string }[] = [
   { value: "semi_annual_report", label: "Semi-Annual Report (SOP-03)" },
   { value: "annual_iul_review", label: "Annual IUL Review (SOP-03)" },
   { value: "tax_prep_package", label: "Tax Prep Package (SOP-03)" },
+  { value: "delaware_formation_docs", label: "Delaware Formation Docs (SOP-02)" },
+  { value: "corporate_address_confirmation", label: "Corporate Address Confirmation (SOP-02)" },
+  { value: "registered_agent_confirmation", label: "Registered Agent Confirmation (SOP-02)" },
+  { value: "gl_insurance_certificate", label: "GL Insurance Certificate (SOP-02)" },
   { value: "other", label: "Other" },
 ];
 
@@ -54,6 +63,11 @@ const fmt = (n: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
 
 const AdminClientDetail = () => {
+  const { roles } = useAuth();
+  const showInvoices = can(roles, "view:finance");
+  const showServices = can(roles, "manage:services");
+  const showWorkers = can(roles, "view:workers");
+  const showTaxStrategy = can(roles, "view:tax_strategy");
   const { id } = useParams<{ id: string }>();
   const [client, setClient] = useState<any>(null);
   const [discoveries, setDiscoveries] = useState<DiscoverySession[]>([]);
@@ -260,15 +274,49 @@ const AdminClientDetail = () => {
   };
 
   // ---- Service activation with auto-tasks ----
-  const activateService = async (serviceId: string) => {
-    if (!id || !serviceId) return;
-    setBusy(true);
+  // Service-name discriminators (centralized so the cascade rules are easy to audit)
+  const SOP03_RECURRING_TIERS = [
+    "Managed Accounting — 1 Company",
+    "Managed Accounting — 2 Companies",
+    "Managed Accounting — 3+ Companies",
+  ];
+  const SOP04_NAME = "Tax & Compliance Strategy";
+
+  const isSop03Recurring = (name: string | undefined) => !!name && SOP03_RECURRING_TIERS.includes(name);
+  const isSop04 = (name: string | undefined) => name === SOP04_NAME;
+  // Standalone-price-prompt eligibility: any service with base_price 0 that isn't a
+  // cascade-spawned activation (SOP-04 bundled goes through performActivation directly,
+  // bypassing this check). Applies to SOP-02 and any future case-by-case-priced service.
+  const needsStandalonePricePrompt = (service: { name?: string; base_price?: number } | undefined) =>
+    !!service && (service.base_price ?? 0) === 0;
+
+  // Standalone-SOP-04 price prompt
+  const [priceDialogOpen, setPriceDialogOpen] = useState(false);
+  const [pendingActivationServiceId, setPendingActivationServiceId] = useState<string | null>(null);
+  const [priceInput, setPriceInput] = useState("");
+
+  const performActivation = async (
+    serviceId: string,
+    options: { auto_activated?: boolean; price_override?: number | null } = {},
+  ) => {
+    if (!id) return null;
+    const { data: { user } } = await supabase.auth.getUser();
+    const insertPayload: any = {
+      client_id: id,
+      service_id: serviceId,
+      auto_activated: options.auto_activated ?? false,
+    };
+    if (options.price_override != null) insertPayload.price_override = options.price_override;
+
     const { data: csRow, error: csErr } = await supabase
       .from("client_services")
-      .insert({ client_id: id, service_id: serviceId })
+      .insert(insertPayload)
       .select()
       .single();
-    if (csErr || !csRow) { setBusy(false); toast.error(csErr?.message ?? "Failed"); return; }
+    if (csErr || !csRow) {
+      toast.error(csErr?.message ?? "Failed");
+      return null;
+    }
 
     const { data: templates } = await supabase
       .from("service_task_templates")
@@ -277,7 +325,6 @@ const AdminClientDetail = () => {
       .order("sort_order", { ascending: true });
 
     if (templates && templates.length > 0) {
-      const { data: { user } } = await supabase.auth.getUser();
       const today = new Date();
       const taskRows = templates.map((t: any, idx: number) => ({
         title: t.title,
@@ -294,19 +341,144 @@ const AdminClientDetail = () => {
       }));
       const { error: tasksErr } = await supabase.from("tasks").insert(taskRows);
       if (tasksErr) {
-        setBusy(false);
         toast.error(`Service activated but task creation failed: ${tasksErr.message}`);
-        load();
-        return;
+        return csRow;
+      }
+    }
+    return csRow;
+  };
+
+  // Ensure a SOP-04 client_services row exists + is active for this client.
+  // Returns true if a row was created/reactivated, false if already-active.
+  const ensureBundledSop04 = async (): Promise<boolean> => {
+    if (!id) return false;
+    const sop04Service = allServices.find((s) => s.name === SOP04_NAME);
+    if (!sop04Service) return false;
+
+    const { data: existing } = await supabase
+      .from("client_services")
+      .select("id, is_active")
+      .eq("client_id", id)
+      .eq("service_id", sop04Service.id)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (existing) {
+      if (existing.is_active) return false;
+      const { error } = await supabase
+        .from("client_services")
+        .update({ is_active: true, auto_activated: true })
+        .eq("id", existing.id);
+      if (error) {
+        toast.error(`SOP-04 reactivation failed: ${error.message}`);
+        return false;
+      }
+      return true;
+    }
+
+    await performActivation(sop04Service.id, { auto_activated: true });
+    return true;
+  };
+
+  const activateService = async (serviceId: string) => {
+    if (!id || !serviceId) return;
+    const service = allServices.find((s) => s.id === serviceId);
+
+    // Standalone activation of any case-by-case-priced service (SOP-04, SOP-02, etc.)
+    // → prompt for price first
+    if (needsStandalonePricePrompt(service)) {
+      setPendingActivationServiceId(serviceId);
+      setPriceInput("");
+      setPriceDialogOpen(true);
+      return;
+    }
+
+    setBusy(true);
+    const csRow = await performActivation(serviceId);
+    if (!csRow) { setBusy(false); return; }
+
+    let cascadeMsg = "";
+    if (isSop03Recurring(service?.name)) {
+      const cascaded = await ensureBundledSop04();
+      if (cascaded) cascadeMsg = " · SOP-04 (Tax & Compliance Strategy) bundled automáticamente";
+    }
+
+    setBusy(false);
+    toast.success(`Servicio activado${cascadeMsg}`);
+    load();
+  };
+
+  const confirmStandaloneActivation = async () => {
+    if (!pendingActivationServiceId) return;
+    const price = Number(priceInput);
+    if (!Number.isFinite(price) || price < 0) {
+      toast.error("Ingresá un precio válido (0 o más)");
+      return;
+    }
+    const service = allServices.find((s) => s.id === pendingActivationServiceId);
+    setBusy(true);
+    const csRow = await performActivation(pendingActivationServiceId, {
+      auto_activated: false,
+      price_override: price,
+    });
+    setBusy(false);
+    setPriceDialogOpen(false);
+    setPendingActivationServiceId(null);
+    setPriceInput("");
+    if (csRow) {
+      toast.success(`${service?.name ?? "Servicio"} activado standalone @ $${price.toLocaleString()}`);
+      load();
+    }
+  };
+
+  const deactivateService = async (cs: any) => {
+    if (!id) return;
+    setBusy(true);
+    const { error } = await supabase
+      .from("client_services")
+      .update({ is_active: false })
+      .eq("id", cs.id);
+    if (error) {
+      setBusy(false);
+      toast.error(error.message);
+      return;
+    }
+
+    // Cascade-deactivate bundled SOP-04 only if:
+    //  - this service is a SOP-03 recurring tier, AND
+    //  - no other recurring SOP-03 tier is still active for this client
+    if (isSop03Recurring(cs.services?.name)) {
+      const sop04Service = allServices.find((s) => s.name === SOP04_NAME);
+      const stillActiveOtherTier = services.some(
+        (s: any) =>
+          s.id !== cs.id &&
+          s.is_active &&
+          isSop03Recurring(s.services?.name),
+      );
+      if (!stillActiveOtherTier && sop04Service) {
+        const { data: bundledRows } = await supabase
+          .from("client_services")
+          .select("id")
+          .eq("client_id", id)
+          .eq("service_id", sop04Service.id)
+          .eq("auto_activated", true)
+          .eq("is_active", true);
+        if (bundledRows && bundledRows.length > 0) {
+          await supabase
+            .from("client_services")
+            .update({ is_active: false })
+            .in("id", bundledRows.map((r: any) => r.id));
+          setBusy(false);
+          toast.success("Servicio desactivado · SOP-04 bundled también desactivado");
+          load();
+          return;
+        }
       }
     }
 
     setBusy(false);
-    toast.success(
-      templates && templates.length > 0
-        ? `Service activated (${templates.length} task${templates.length === 1 ? "" : "s"} created)`
-        : "Service activated (no task templates configured)"
-    );
+    toast.success("Servicio desactivado");
     load();
   };
 
@@ -317,11 +489,8 @@ const AdminClientDetail = () => {
     clientServiceId?: string;
   } | null>(null);
 
-  const openSendKitEmail = (clientServiceId: string) => {
-    setEmailDialogConfig({
-      templateKey: "sop01_kit_delivery",
-      clientServiceId,
-    });
+  const openSendKitEmail = (clientServiceId: string, templateKey = "sop01_kit_delivery") => {
+    setEmailDialogConfig({ templateKey, clientServiceId });
     setEmailDialogOpen(true);
   };
 
@@ -400,8 +569,11 @@ const AdminClientDetail = () => {
           <TabsTrigger value="discovery">Discovery</TabsTrigger>
           <TabsTrigger value="documents">Documentos</TabsTrigger>
           <TabsTrigger value="tasks">Tareas</TabsTrigger>
-          <TabsTrigger value="invoices">Facturas</TabsTrigger>
-          <TabsTrigger value="services">Servicios</TabsTrigger>
+          {showInvoices && <TabsTrigger value="invoices">Facturas</TabsTrigger>}
+          {showServices && <TabsTrigger value="services">Servicios</TabsTrigger>}
+          {showWorkers && <TabsTrigger value="workers">Workers</TabsTrigger>}
+          {showTaxStrategy && <TabsTrigger value="tax-strategy">Estrategia fiscal</TabsTrigger>}
+          <TabsTrigger value="workspace">Workspace</TabsTrigger>
         </TabsList>
 
         <TabsContent value="info">
@@ -598,11 +770,12 @@ const AdminClientDetail = () => {
               </p>
             </div>
             <Table>
-              <TableHeader><TableRow><TableHead>Servicio</TableHead><TableHead>Categoría</TableHead><TableHead>Inicio</TableHead><TableHead>Activo</TableHead><TableHead className="text-right">Acciones</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>Servicio</TableHead><TableHead>Categoría</TableHead><TableHead className="text-right">Precio</TableHead><TableHead>Inicio</TableHead><TableHead>Activo</TableHead><TableHead className="text-right">Acciones</TableHead></TableRow></TableHeader>
               <TableBody>
-                {services.length === 0 ? <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Sin servicios contratados</TableCell></TableRow>
+                {services.length === 0 ? <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Sin servicios contratados</TableCell></TableRow>
                 : services.map((cs) => {
                   const isBusinessFormation = cs.services?.name === "Business Formation & Structure";
+                  const isSop02Delaware = cs.services?.name === "Delaware Infrastructure Platform";
                   const isSop03 = cs.services?.name?.startsWith("Managed Accounting") || cs.services?.name === "Tax-Season Bookkeeping (One-Time)";
                   const cadenceLabels: Record<string, string> = {
                     quarterly: "Trimestral",
@@ -639,6 +812,15 @@ const AdminClientDetail = () => {
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">{cs.services?.category}</TableCell>
+                      <TableCell className="text-right text-sm">
+                        {(() => {
+                          const effective = cs.price_override != null ? cs.price_override : cs.services?.base_price ?? 0;
+                          if (cs.auto_activated && effective === 0) {
+                            return <span className="text-muted-foreground italic">Bundled</span>;
+                          }
+                          return <span>{fmt(effective)}</span>;
+                        })()}
+                      </TableCell>
                       <TableCell className="text-muted-foreground">{new Date(cs.started_at).toLocaleDateString()}</TableCell>
                       <TableCell>{cs.is_active ? "Sí" : "No"}</TableCell>
                       <TableCell className="text-right">
@@ -647,7 +829,16 @@ const AdminClientDetail = () => {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => openSendKitEmail(cs.id)}
+                              onClick={() => openSendKitEmail(cs.id, "sop01_kit_delivery")}
+                            >
+                              <Send className="h-3.5 w-3.5" /> Send kit email
+                            </Button>
+                          )}
+                          {isSop02Delaware && cs.is_active && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openSendKitEmail(cs.id, "sop02_kit_delivery")}
                             >
                               <Send className="h-3.5 w-3.5" /> Send kit email
                             </Button>
@@ -661,6 +852,17 @@ const AdminClientDetail = () => {
                               <Settings className="h-3.5 w-3.5" /> Configurar
                             </Button>
                           )}
+                          {cs.is_active && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => deactivateService(cs)}
+                              disabled={busy}
+                              title="Desactivar servicio"
+                            >
+                              Desactivar
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -669,6 +871,26 @@ const AdminClientDetail = () => {
               </TableBody>
             </Table>
           </CardContent></Card>
+        </TabsContent>
+
+        <TabsContent value="workers">
+          <Card>
+            <CardContent className="p-6">
+              {id && <AdminWorkersTab clientId={id} />}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="tax-strategy">
+          <Card>
+            <CardContent className="p-6">
+              {id && <AdminTaxStrategyTab clientId={id} />}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="workspace">
+          {id && <AdminWorkspaceTab clientId={id} />}
         </TabsContent>
       </Tabs>
 
@@ -846,6 +1068,41 @@ const AdminClientDetail = () => {
           onSaved={load}
         />
       )}
+
+      {/* Standalone-priced services — price prompt (SOP-02, SOP-04 standalone, future case-by-case) */}
+      <Dialog open={priceDialogOpen} onOpenChange={(open) => { setPriceDialogOpen(open); if (!open) { setPendingActivationServiceId(null); setPriceInput(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Activar {allServices.find((s) => s.id === pendingActivationServiceId)?.name ?? "servicio"} (standalone)
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Este servicio se cobra caso a caso. Ingresá el precio que Abner cotizó para este cliente.
+            </p>
+            <div>
+              <Label htmlFor="standalone-price">Precio (USD) *</Label>
+              <Input
+                id="standalone-price"
+                type="number"
+                min={0}
+                step={50}
+                value={priceInput}
+                onChange={(e) => setPriceInput(e.target.value)}
+                placeholder="Ej: 1500"
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPriceDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={confirmStandaloneActivation} disabled={busy || priceInput === ""}>
+              Activar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

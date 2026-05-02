@@ -15,6 +15,7 @@ import { GanttView } from "@/components/admin/workspace/GanttView";
 import { ColumnsDialog } from "@/components/admin/workspace/ColumnsDialog";
 import { MembersDialog } from "@/components/admin/workspace/MembersDialog";
 import { TaskDialog } from "@/components/admin/workspace/TaskDialog";
+import { TaskAssignDialog } from "@/components/admin/workspace/TaskAssignDialog";
 
 type Workspace = {
   id: string; name: string; description: string | null; color: string;
@@ -31,6 +32,7 @@ const AdminWorkspaceDetail = () => {
   const [colDialog, setColDialog] = useState(false);
   const [memDialog, setMemDialog] = useState(false);
   const [taskDialog, setTaskDialog] = useState(false);
+  const [assignTaskId, setAssignTaskId] = useState<string | null>(null);
 
   const load = async () => {
     if (!id) return;
@@ -38,15 +40,16 @@ const AdminWorkspaceDetail = () => {
       supabase.from("workspaces").select("*").eq("id", id).single(),
       supabase.from("workspace_columns").select("*").eq("workspace_id", id).order("sort_order"),
       supabase.from("tasks").select("id, title, description, priority, due_date, start_date, column_id, assignee_id, progress").eq("workspace_id", id),
-      supabase.from("user_roles").select("user_id").eq("role", "admin"),
+      supabase.from("user_roles").select("user_id, role").neq("role", "client"),
     ]);
     setWs(w as Workspace);
     setColumns((cols ?? []) as Column[]);
     setTasks((ts ?? []) as Task[]);
 
-    const adminIds = (roles ?? []).map((r: any) => r.user_id);
-    if (adminIds.length) {
-      const { data: profs } = await supabase.from("profiles").select("id, full_name, email").in("id", adminIds);
+    // All internal users (admin, heads, analysts) become assignable
+    const internalIds = Array.from(new Set((roles ?? []).map((r: any) => r.user_id)));
+    if (internalIds.length) {
+      const { data: profs } = await supabase.from("profiles").select("id, full_name, email").in("id", internalIds);
       setAdmins((profs ?? []) as any);
     }
   };
@@ -55,7 +58,13 @@ const AdminWorkspaceDetail = () => {
 
   const handleMove = async (taskId: string, newColumnId: string) => {
     const col = columns.find((c) => c.id === newColumnId);
-    setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, column_id: newColumnId } : t));
+    const maxSort = Math.max(...columns.map((c) => c.sort_order), 0);
+    const newProgress = col?.is_done_column || col?.sort_order === maxSort
+      ? 100
+      : maxSort === 0
+        ? 0
+        : Math.round(((col?.sort_order ?? 0) * 100) / maxSort);
+    setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, column_id: newColumnId, progress: newProgress } : t));
     const update: any = { column_id: newColumnId };
     if (col?.is_done_column) update.status = "closed";
     const { error } = await supabase.from("tasks").update(update).eq("id", taskId);
@@ -135,7 +144,7 @@ const AdminWorkspaceDetail = () => {
         </div>
 
         <TabsContent value="kanban" className="mt-4">
-          <KanbanView columns={columns} tasks={tasks} assigneeName={assigneeName} onMove={handleMove} />
+          <KanbanView columns={columns} tasks={tasks} assigneeName={assigneeName} onMove={handleMove} onAssignClick={(tid) => setAssignTaskId(tid)} />
         </TabsContent>
         <TabsContent value="list" className="mt-4">
           <ListView columns={columns} tasks={tasks} assigneeName={assigneeName} onMove={handleMove} />
@@ -157,6 +166,14 @@ const AdminWorkspaceDetail = () => {
         open={taskDialog}
         onOpenChange={setTaskDialog}
         onCreated={load}
+      />
+      <TaskAssignDialog
+        taskId={assignTaskId}
+        taskTitle={tasks.find((t) => t.id === assignTaskId)?.title}
+        currentAssigneeId={tasks.find((t) => t.id === assignTaskId)?.assignee_id ?? null}
+        admins={admins}
+        onClose={() => setAssignTaskId(null)}
+        onSaved={load}
       />
     </div>
   );

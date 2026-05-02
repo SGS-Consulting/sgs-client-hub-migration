@@ -2,7 +2,7 @@
 
 **Audiencia:** Karen (Head of IT, líder del proyecto SGS Client Hub).
 **Autor:** Javi + Claude.
-**Última actualización:** 2026-04-29.
+**Última actualización:** 2026-05-01.
 
 Este documento lista todo lo que el dashboard necesita conectar con plataformas externas (GoHighLevel, Stripe, Calendly, etc.) para funcionar end-to-end. Está organizado por sistema, en orden de dependencia: lo que tiene que hacerse primero está arriba.
 
@@ -359,6 +359,29 @@ Para evitar confusión, esto **NO** te requiere acción:
 - **QuickBooks API:** para SOP-03 v1, el dashboard solo trackea status manual ("QuickBooks configurado: ✓"). No hay integración con la API de QB todavía.
 - **Firma digital integrada:** DocuSign sigue siendo la herramienta hasta que construyamos el reemplazo en Phase 3.
 - **Github Actions / CI:** Vercel maneja el build/deploy automáticamente. No hace falta CI separado.
+
+---
+
+## ⚠️ Pre-prod gates (bloquean producción — resolver antes de salir a clientes reales)
+
+### G1. Encriptar `tin_full` en `client_workers_w9_data` (SOP-04)
+
+**Contexto:** la tabla `client_workers_w9_data` (creada en migración `20260501121841_sop04_slice_schema.sql`) almacena el TIN/SSN/EIN completo del worker en texto plano. Hoy está protegido solo por RLS admin-only — funciona para dev. Para producción, esto es exactamente lo que un audit de seguridad de EE.UU. flaggea como crítico.
+
+**Acción requerida antes de SOP-04 ir a producción:**
+
+1. Decidir esquema de key management (recomendado: Supabase Vault con una key por proyecto, rotación anual; alternativa: KMS externo).
+2. Crear nueva migración que:
+   - Agrega `tin_full_encrypted BYTEA` (o `tin_full_ciphertext TEXT` si usás Vault)
+   - Agrega RPC `encrypt_tin(plaintext TEXT)` y `decrypt_tin(ciphertext, requester_uid UUID)` con `SECURITY DEFINER`
+   - Migra todos los `tin_full` plaintext existentes al campo encriptado, después dropea la columna plaintext
+   - Recrea `tin_last4` como columna no-generada poblada por trigger antes de encriptar
+3. Actualizar el Edge Function `worker-w9-submit` para encriptar antes de insertar.
+4. Actualizar la admin UI para usar `decrypt_tin` solo cuando el admin necesita ver el TIN completo (default: mostrar solo last-4).
+
+**Quién:** Karen + Javi (decisión de arquitectura) → migration-author agent (implementación).
+
+**Tracking:** este gate sale de la lista cuando la migración encriptada esté aplicada y los plaintext columns dropeados.
 
 ---
 

@@ -12,6 +12,10 @@ import {
   FolderKanban,
   Inbox,
   MessageCircle,
+  Scale,
+  TrendingUp,
+  Shield,
+  Palette,
 } from "lucide-react";
 import {
   Sidebar,
@@ -37,15 +41,19 @@ const mainItems: Item[] = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard, end: true, cap: "view:dashboard" },
   { title: "Centro de trabajo", url: "/admin/tasks", icon: KanbanSquare, end: true, cap: "view:tasks" },
   { title: "Workspaces", url: "/admin/tasks/workspaces", icon: FolderKanban, cap: "view:workspaces" },
-  { title: "Intake", url: "/admin/intake", icon: Inbox, cap: "view:clients" },
+  { title: "Intake", url: "/admin/intake", icon: Inbox, cap: "view:intake" },
   { title: "Clientes", url: "/admin/clients", icon: Users, cap: "view:clients" },
   { title: "Documentos", url: "/admin/documents", icon: FileText, cap: "view:documents" },
   { title: "Facturas", url: "/admin/invoices", icon: Receipt, cap: "view:finance" },
   { title: "Consultas", url: "/admin/queries", icon: MessageCircle, cap: "view:queries" },
+  { title: "Legal", url: "/admin/legal-cases", icon: Scale, cap: "view:legal_cases" },
+  { title: "Asesoría", url: "/admin/advisory", icon: TrendingUp, cap: "view:advisory" },
+  { title: "Seguros", url: "/admin/insurance", icon: Shield, cap: "view:insurance" },
+  { title: "Branding", url: "/admin/branding", icon: Palette, cap: "view:branding" },
 ];
 
 const opsItems: Item[] = [
-  { title: "Servicios", url: "/admin/services", icon: Briefcase, cap: "view:services" },
+  { title: "Servicios", url: "/admin/services", icon: Briefcase, cap: "manage:services" },
   { title: "Equipo", url: "/admin/team", icon: UsersRound, cap: "view:team" },
   { title: "Configuración", url: "/admin/settings", icon: Settings, cap: "view:settings" },
 ];

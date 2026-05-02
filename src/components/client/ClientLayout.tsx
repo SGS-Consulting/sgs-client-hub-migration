@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { LayoutDashboard, FileText, Receipt, Briefcase, User, LifeBuoy, LogOut, Menu, MessageCircle } from "lucide-react";
+import { LayoutDashboard, FileText, Receipt, Briefcase, User, LifeBuoy, LogOut, Menu, MessageCircle, Users, Scale, TrendingUp, Shield, Palette } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,12 @@ const items = [
   { title: "Documentos", url: "/portal/documents", icon: FileText },
   { title: "Facturas", url: "/portal/invoices", icon: Receipt },
   { title: "Servicios", url: "/portal/services", icon: Briefcase },
+  { title: "Mi equipo", url: "/portal/workers", icon: Users },
   { title: "Preguntas", url: "/portal/queries", icon: MessageCircle },
+  { title: "Consulta legal", url: "/portal/legal", icon: Scale },
+  { title: "Asesoría", url: "/portal/advisory", icon: TrendingUp },
+  { title: "Seguros", url: "/portal/insurance", icon: Shield },
+  { title: "Branding", url: "/portal/branding", icon: Palette },
   { title: "Soporte", url: "/portal/support", icon: LifeBuoy },
 ];
 

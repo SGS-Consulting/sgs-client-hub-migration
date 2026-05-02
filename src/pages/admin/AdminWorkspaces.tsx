@@ -28,6 +28,7 @@ const AdminWorkspaces = () => {
   const navigate = useNavigate();
   const [items, setItems] = useState<Workspace[]>([]);
   const [taskCounts, setTaskCounts] = useState<Record<string, number>>({});
+  const [progressByWs, setProgressByWs] = useState<Record<string, number>>({});
   const [showArchived, setShowArchived] = useState(false);
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
@@ -42,14 +43,22 @@ const AdminWorkspaces = () => {
   const load = async () => {
     const [ws, ts] = await Promise.all([
       supabase.from("workspaces").select("*").order("created_at", { ascending: false }),
-      supabase.from("tasks").select("workspace_id"),
+      supabase.from("tasks").select("workspace_id, progress"),
     ]);
     setItems((ws.data ?? []) as Workspace[]);
     const counts: Record<string, number> = {};
+    const sums: Record<string, number> = {};
     (ts.data ?? []).forEach((t: any) => {
-      if (t.workspace_id) counts[t.workspace_id] = (counts[t.workspace_id] ?? 0) + 1;
+      if (!t.workspace_id) return;
+      counts[t.workspace_id] = (counts[t.workspace_id] ?? 0) + 1;
+      sums[t.workspace_id] = (sums[t.workspace_id] ?? 0) + (t.progress ?? 0);
+    });
+    const progress: Record<string, number> = {};
+    Object.keys(counts).forEach((wsId) => {
+      progress[wsId] = counts[wsId] > 0 ? Math.round(sums[wsId] / counts[wsId]) : 0;
     });
     setTaskCounts(counts);
+    setProgressByWs(progress);
   };
 
   useEffect(() => { load(); }, []);
@@ -211,6 +220,20 @@ const AdminWorkspaces = () => {
                   <h3 className="font-semibold group-hover:text-primary transition">{w.name}</h3>
                   {w.description && <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{w.description}</p>}
                 </Link>
+                {(taskCounts[w.id] ?? 0) > 0 && (
+                  <div>
+                    <div className="flex items-baseline justify-between text-xs mb-1">
+                      <span className="text-muted-foreground">Progreso</span>
+                      <span className="font-medium tabular-nums">{progressByWs[w.id] ?? 0}%</span>
+                    </div>
+                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full transition-all"
+                        style={{ width: `${progressByWs[w.id] ?? 0}%`, backgroundColor: w.color }}
+                      />
+                    </div>
+                  </div>
+                )}
                 <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
                   <span>📋 {taskCounts[w.id] ?? 0} tareas</span>
                   <span>{new Date(w.created_at).toLocaleDateString()}</span>

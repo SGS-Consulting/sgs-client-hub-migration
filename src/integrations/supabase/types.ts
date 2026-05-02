@@ -77,6 +77,127 @@ export type Database = {
           },
         ]
       }
+      advisory_cases: {
+        Row: {
+          abner_notes: string | null
+          client_id: string
+          closed_at: string | null
+          created_at: string
+          id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          abner_notes?: string | null
+          client_id: string
+          closed_at?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          abner_notes?: string | null
+          client_id?: string
+          closed_at?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "advisory_cases_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      advisory_checkins: {
+        Row: {
+          case_id: string
+          client_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          session_date: string
+        }
+        Insert: {
+          case_id: string
+          client_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          session_date: string
+        }
+        Update: {
+          case_id?: string
+          client_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          session_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "advisory_checkins_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "advisory_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "advisory_checkins_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      branding_projects: {
+        Row: {
+          abner_notes: string | null
+          client_id: string
+          created_at: string
+          delivered_at: string | null
+          id: string
+          status: string
+          updated_at: string
+          web_included: boolean
+        }
+        Insert: {
+          abner_notes?: string | null
+          client_id: string
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          status?: string
+          updated_at?: string
+          web_included?: boolean
+        }
+        Update: {
+          abner_notes?: string | null
+          client_id?: string
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          status?: string
+          updated_at?: string
+          web_included?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branding_projects_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_queries: {
         Row: {
           client_id: string
@@ -159,6 +280,7 @@ export type Database = {
       client_services: {
         Row: {
           acknowledged_at: string | null
+          auto_activated: boolean
           business_profile_data: Json | null
           client_id: string
           created_at: string
@@ -166,6 +288,7 @@ export type Database = {
           id: string
           is_active: boolean
           notes: string | null
+          price_override: number | null
           qb_configured_at: string | null
           service_id: string
           started_at: string
@@ -173,6 +296,7 @@ export type Database = {
         }
         Insert: {
           acknowledged_at?: string | null
+          auto_activated?: boolean
           business_profile_data?: Json | null
           client_id: string
           created_at?: string
@@ -180,6 +304,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           notes?: string | null
+          price_override?: number | null
           qb_configured_at?: string | null
           service_id: string
           started_at?: string
@@ -187,6 +312,7 @@ export type Database = {
         }
         Update: {
           acknowledged_at?: string | null
+          auto_activated?: boolean
           business_profile_data?: Json | null
           client_id?: string
           created_at?: string
@@ -194,6 +320,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           notes?: string | null
+          price_override?: number | null
           qb_configured_at?: string | null
           service_id?: string
           started_at?: string
@@ -212,6 +339,244 @@ export type Database = {
             columns: ["service_id"]
             isOneToOne: false
             referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_workers: {
+        Row: {
+          client_id: string
+          created_at: string
+          created_by: string | null
+          email: string | null
+          end_date: string | null
+          full_name: string
+          id: string
+          is_contractor: boolean | null
+          notes: string | null
+          start_date: string | null
+          status: string
+          updated_at: string
+          updated_by: string | null
+          w9_document_id: string | null
+          worker_type: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          end_date?: string | null
+          full_name: string
+          id?: string
+          is_contractor?: boolean | null
+          notes?: string | null
+          start_date?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+          w9_document_id?: string | null
+          worker_type?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          end_date?: string | null
+          full_name?: string
+          id?: string
+          is_contractor?: boolean | null
+          notes?: string | null
+          start_date?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+          w9_document_id?: string | null
+          worker_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_workers_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_workers_w9_document_id_fkey"
+            columns: ["w9_document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_workers_history: {
+        Row: {
+          action: string
+          changed_at: string
+          changed_by: string | null
+          id: string
+          new_row: Json | null
+          old_row: Json | null
+          worker_id: string
+        }
+        Insert: {
+          action: string
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_row?: Json | null
+          old_row?: Json | null
+          worker_id: string
+        }
+        Update: {
+          action?: string
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_row?: Json | null
+          old_row?: Json | null
+          worker_id?: string
+        }
+        Relationships: []
+      }
+      client_workers_w9_data: {
+        Row: {
+          account_numbers: string | null
+          address_line1: string
+          address_line2: string | null
+          business_name: string | null
+          city: string
+          created_at: string
+          exempt_fatca_code: string | null
+          exempt_payee_code: string | null
+          federal_tax_classification: string
+          id: string
+          legal_name: string
+          llc_classification_letter: string | null
+          other_classification_text: string | null
+          requester_name_address: string | null
+          signature_acknowledged_at: string
+          signature_ip: string | null
+          signature_typed_name: string
+          state: string
+          submitted_at: string
+          tin_full: string
+          tin_last4: string | null
+          tin_type: string
+          updated_at: string
+          verified_at: string | null
+          verified_by: string | null
+          worker_id: string
+          zip: string
+        }
+        Insert: {
+          account_numbers?: string | null
+          address_line1: string
+          address_line2?: string | null
+          business_name?: string | null
+          city: string
+          created_at?: string
+          exempt_fatca_code?: string | null
+          exempt_payee_code?: string | null
+          federal_tax_classification: string
+          id?: string
+          legal_name: string
+          llc_classification_letter?: string | null
+          other_classification_text?: string | null
+          requester_name_address?: string | null
+          signature_acknowledged_at?: string
+          signature_ip?: string | null
+          signature_typed_name: string
+          state: string
+          submitted_at?: string
+          tin_full: string
+          tin_last4?: string | null
+          tin_type: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+          worker_id: string
+          zip: string
+        }
+        Update: {
+          account_numbers?: string | null
+          address_line1?: string
+          address_line2?: string | null
+          business_name?: string | null
+          city?: string
+          created_at?: string
+          exempt_fatca_code?: string | null
+          exempt_payee_code?: string | null
+          federal_tax_classification?: string
+          id?: string
+          legal_name?: string
+          llc_classification_letter?: string | null
+          other_classification_text?: string | null
+          requester_name_address?: string | null
+          signature_acknowledged_at?: string
+          signature_ip?: string | null
+          signature_typed_name?: string
+          state?: string
+          submitted_at?: string
+          tin_full?: string
+          tin_last4?: string | null
+          tin_type?: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+          worker_id?: string
+          zip?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_workers_w9_data_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: true
+            referencedRelation: "client_workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_insurance: {
+        Row: {
+          client_id: string
+          coverage_status: string
+          created_at: string
+          has_gl_insurance: boolean
+          has_wc_insurance: boolean
+          id: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          coverage_status?: string
+          created_at?: string
+          has_gl_insurance?: boolean
+          has_wc_insurance?: boolean
+          id?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          coverage_status?: string
+          created_at?: string
+          has_gl_insurance?: boolean
+          has_wc_insurance?: boolean
+          id?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_insurance_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
         ]
@@ -338,13 +703,17 @@ export type Database = {
           file_path: string
           file_size: number | null
           id: string
+          legal_case_id: string | null
           mime_type: string | null
           notes: string | null
           rejection_reason: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           status: Database["public"]["Enums"]["document_status"]
+          tax_year: number | null
           uploaded_by: string | null
+          worker_id: string | null
+          branding_project_id: string | null
         }
         Insert: {
           category?: Database["public"]["Enums"]["document_category"]
@@ -354,13 +723,17 @@ export type Database = {
           file_path: string
           file_size?: number | null
           id?: string
+          legal_case_id?: string | null
           mime_type?: string | null
           notes?: string | null
           rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: Database["public"]["Enums"]["document_status"]
+          tax_year?: number | null
           uploaded_by?: string | null
+          worker_id?: string | null
+          branding_project_id?: string | null
         }
         Update: {
           category?: Database["public"]["Enums"]["document_category"]
@@ -370,13 +743,17 @@ export type Database = {
           file_path?: string
           file_size?: number | null
           id?: string
+          legal_case_id?: string | null
           mime_type?: string | null
           notes?: string | null
           rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: Database["public"]["Enums"]["document_status"]
+          tax_year?: number | null
           uploaded_by?: string | null
+          worker_id?: string | null
+          branding_project_id?: string | null
         }
         Relationships: [
           {
@@ -384,6 +761,27 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_legal_case_id_fkey"
+            columns: ["legal_case_id"]
+            isOneToOne: false
+            referencedRelation: "legal_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "client_workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_branding_project_id_fkey"
+            columns: ["branding_project_id"]
+            isOneToOne: false
+            referencedRelation: "branding_projects"
             referencedColumns: ["id"]
           },
         ]
@@ -645,6 +1043,79 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      legal_cases: {
+        Row: {
+          abner_notes: string | null
+          advisory_meeting_id: string | null
+          assigned_to: string | null
+          client_id: string
+          client_service_id: string | null
+          created_at: string
+          description: string
+          id: string
+          law_firm_consulted: boolean
+          resolved_at: string | null
+          status: string
+          subject: string
+          submitted_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          abner_notes?: string | null
+          advisory_meeting_id?: string | null
+          assigned_to?: string | null
+          client_id: string
+          client_service_id?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          law_firm_consulted?: boolean
+          resolved_at?: string | null
+          status?: string
+          subject: string
+          submitted_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          abner_notes?: string | null
+          advisory_meeting_id?: string | null
+          assigned_to?: string | null
+          client_id?: string
+          client_service_id?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          law_firm_consulted?: boolean
+          resolved_at?: string | null
+          status?: string
+          subject?: string
+          submitted_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_cases_advisory_meeting_id_fkey"
+            columns: ["advisory_meeting_id"]
+            isOneToOne: false
+            referencedRelation: "discovery_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_cases_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_cases_client_service_id_fkey"
+            columns: ["client_service_id"]
+            isOneToOne: false
+            referencedRelation: "client_services"
             referencedColumns: ["id"]
           },
         ]
@@ -1125,6 +1596,123 @@ export type Database = {
           },
         ]
       }
+      tax_filings: {
+        Row: {
+          client_id: string
+          client_service_id: string | null
+          created_at: string
+          created_by: string | null
+          extension_requested_at: string | null
+          filed_with_irs_at: string | null
+          filing_method: string | null
+          filing_type: string | null
+          filing_year: number
+          id: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          client_service_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          extension_requested_at?: string | null
+          filed_with_irs_at?: string | null
+          filing_method?: string | null
+          filing_type?: string | null
+          filing_year: number
+          id?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          client_service_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          extension_requested_at?: string | null
+          filed_with_irs_at?: string | null
+          filing_method?: string | null
+          filing_type?: string | null
+          filing_year?: number
+          id?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_filings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_filings_client_service_id_fkey"
+            columns: ["client_service_id"]
+            isOneToOne: false
+            referencedRelation: "client_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tax_strategies: {
+        Row: {
+          client_id: string
+          client_service_id: string | null
+          created_at: string
+          created_by: string | null
+          expected_savings_usd: number | null
+          id: string
+          identified_at: string | null
+          rationale: string | null
+          status: string
+          strategy_summary: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          client_service_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          expected_savings_usd?: number | null
+          id?: string
+          identified_at?: string | null
+          rationale?: string | null
+          status?: string
+          strategy_summary: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          client_service_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          expected_savings_usd?: number | null
+          id?: string
+          identified_at?: string | null
+          rationale?: string | null
+          status?: string
+          strategy_summary?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_strategies_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_strategies_client_service_id_fkey"
+            columns: ["client_service_id"]
+            isOneToOne: false
+            referencedRelation: "client_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       time_entries: {
         Row: {
           created_at: string
@@ -1183,6 +1771,128 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      worker_classification_questions: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          is_active: boolean
+          question_number: number
+          question_text: string
+          sort_order: number
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          question_number: number
+          question_text: string
+          sort_order?: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          question_number?: number
+          question_text?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      worker_classification_responses: {
+        Row: {
+          answer: string | null
+          answered_at: string
+          answered_by: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          question_id: string
+          worker_id: string
+        }
+        Insert: {
+          answer?: string | null
+          answered_at?: string
+          answered_by?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          question_id: string
+          worker_id: string
+        }
+        Update: {
+          answer?: string | null
+          answered_at?: string
+          answered_by?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          question_id?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_classification_responses_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "worker_classification_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_classification_responses_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "client_workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worker_w9_invites: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          sent_at: string | null
+          status: string
+          token: string
+          viewed_at: string | null
+          worker_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          sent_at?: string | null
+          status?: string
+          token: string
+          viewed_at?: string | null
+          worker_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          sent_at?: string | null
+          status?: string
+          token?: string
+          viewed_at?: string | null
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_w9_invites_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "client_workers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       workspace_columns: {
         Row: {
@@ -1320,8 +2030,20 @@ export type Database = {
         Args: { p_attachment_id?: string; p_id: string; p_response: string }
         Returns: string
       }
+      close_legal_case: {
+        Args: { p_case_id: string; p_notes?: string }
+        Returns: string
+      }
       current_client_id: { Args: never; Returns: string }
       flag_overdue_queries: { Args: never; Returns: number }
+      get_my_active_tax_strategies_count: { Args: never; Returns: number }
+      get_workers_w9_status: {
+        Args: never
+        Returns: {
+          w9_status: string
+          worker_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1331,6 +2053,10 @@ export type Database = {
       }
       is_internal_user: { Args: { _user_id: string }; Returns: boolean }
       spawn_recurring_tasks: { Args: never; Returns: number }
+      submit_legal_case: {
+        Args: { p_description: string; p_subject: string }
+        Returns: string
+      }
     }
     Enums: {
       app_role: "admin" | "client" | "finance" | "operations" | "staff"
@@ -1350,6 +2076,17 @@ export type Database = {
         | "annual_iul_review"
         | "tax_prep_package"
         | "semi_annual_report"
+        | "w9_form"
+        | "1099_form"
+        | "delaware_formation_docs"
+        | "corporate_address_confirmation"
+        | "registered_agent_confirmation"
+        | "gl_insurance_certificate"
+        | "legal_query_attachments"
+        | "advisory_documents"
+        | "wc_insurance_certificate"
+        | "brand_kit"
+        | "brand_brief"
       document_status: "pending_review" | "approved" | "rejected"
       entity_type:
         | "LLC"
@@ -1518,6 +2255,17 @@ export const Constants = {
         "annual_iul_review",
         "tax_prep_package",
         "semi_annual_report",
+        "w9_form",
+        "1099_form",
+        "delaware_formation_docs",
+        "corporate_address_confirmation",
+        "registered_agent_confirmation",
+        "gl_insurance_certificate",
+        "legal_query_attachments",
+        "advisory_documents",
+        "wc_insurance_certificate",
+        "brand_kit",
+        "brand_brief",
       ],
       document_status: ["pending_review", "approved", "rejected"],
       entity_type: [

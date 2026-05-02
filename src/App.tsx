@@ -36,6 +36,16 @@ import ClientInvoices from "./pages/client/ClientInvoices";
 import ClientServices from "./pages/client/ClientServices";
 import ClientSupport from "./pages/client/ClientSupport";
 import ClientQueries from "./pages/client/ClientQueries";
+import ClientWorkers from "./pages/client/ClientWorkers";
+import ClientLegal from "./pages/client/ClientLegal";
+import ClientAdvisory from "./pages/client/ClientAdvisory";
+import ClientInsurance from "./pages/client/ClientInsurance";
+import ClientBranding from "./pages/client/ClientBranding";
+import WorkerW9Form from "./pages/WorkerW9Form";
+import AdminLegalCases from "./pages/admin/AdminLegalCases";
+import AdminAdvisory from "./pages/admin/AdminAdvisory";
+import AdminInsurance from "./pages/admin/AdminInsurance";
+import AdminBranding from "./pages/admin/AdminBranding";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +61,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/intake" element={<Intake />} />
+            <Route path="/w9/:token" element={<WorkerW9Form />} />
 
             {/* Admin (internal team) */}
             <Route path="/admin" element={
@@ -73,10 +84,10 @@ const App = () => (
                 <ProtectedRoute requireArea="internal" requireCap="view:clients"><AdminClientDetail /></ProtectedRoute>
               } />
               <Route path="intake" element={
-                <ProtectedRoute requireArea="internal" requireCap="view:clients"><AdminIntake /></ProtectedRoute>
+                <ProtectedRoute requireArea="internal" requireCap="view:intake"><AdminIntake /></ProtectedRoute>
               } />
               <Route path="intake/:id" element={
-                <ProtectedRoute requireArea="internal" requireCap="view:clients"><AdminIntakeDetail /></ProtectedRoute>
+                <ProtectedRoute requireArea="internal" requireCap="view:intake"><AdminIntakeDetail /></ProtectedRoute>
               } />
               <Route path="documents" element={
                 <ProtectedRoute requireArea="internal" requireCap="view:documents"><AdminDocuments /></ProtectedRoute>
@@ -87,8 +98,20 @@ const App = () => (
               <Route path="queries" element={
                 <ProtectedRoute requireArea="internal" requireCap="view:queries"><AdminQueries /></ProtectedRoute>
               } />
+              <Route path="legal-cases" element={
+                <ProtectedRoute requireArea="internal" requireCap="view:legal_cases"><AdminLegalCases /></ProtectedRoute>
+              } />
+              <Route path="advisory" element={
+                <ProtectedRoute requireArea="internal" requireCap="view:advisory"><AdminAdvisory /></ProtectedRoute>
+              } />
+              <Route path="insurance" element={
+                <ProtectedRoute requireArea="internal" requireCap="view:insurance"><AdminInsurance /></ProtectedRoute>
+              } />
+              <Route path="branding" element={
+                <ProtectedRoute requireArea="internal" requireCap="view:branding"><AdminBranding /></ProtectedRoute>
+              } />
               <Route path="services" element={
-                <ProtectedRoute requireArea="internal" requireCap="view:services"><AdminServices /></ProtectedRoute>
+                <ProtectedRoute requireArea="internal" requireCap="manage:services"><AdminServices /></ProtectedRoute>
               } />
               <Route path="team" element={
                 <ProtectedRoute requireArea="internal" requireCap="view:team"><AdminTeam /></ProtectedRoute>
@@ -108,6 +131,11 @@ const App = () => (
               <Route path="invoices" element={<ClientInvoices />} />
               <Route path="services" element={<ClientServices />} />
               <Route path="queries" element={<ClientQueries />} />
+              <Route path="workers" element={<ClientWorkers />} />
+              <Route path="legal" element={<ClientLegal />} />
+              <Route path="advisory" element={<ClientAdvisory />} />
+              <Route path="insurance" element={<ClientInsurance />} />
+              <Route path="branding" element={<ClientBranding />} />
               <Route path="support" element={<ClientSupport />} />
             </Route>
 

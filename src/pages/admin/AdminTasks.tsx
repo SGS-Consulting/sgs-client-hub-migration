@@ -5,9 +5,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Folder, FolderOpen, Plus, RefreshCw, Zap, ListChecks, Eye, Calendar as CalendarIcon } from "lucide-react";
+import { Folder, FolderOpen, Plus, RefreshCw, Inbox, ListChecks, Users, Calendar as CalendarIcon, UserPlus } from "lucide-react";
 import { PRIORITIES, StatusBadge } from "@/lib/status";
 import { cn } from "@/lib/utils";
+import { TaskAssignDialog } from "@/components/admin/workspace/TaskAssignDialog";
 
 type Workspace = { id: string; name: string; color: string; status: string };
 type ColumnAgg = { id: string; name: string; color: string; workspace_id: string; count: number };
@@ -21,30 +22,39 @@ type Task = {
   assignee_id: string | null;
   status: string;
 };
+type Admin = { id: string; full_name: string | null; email: string };
 
 const AdminTasks = () => {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [columns, setColumns] = useState<ColumnAgg[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [admins, setAdmins] = useState<Admin[]>([]);
   const [me, setMe] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>("all");
   const [loading, setLoading] = useState(false);
+  const [assignTaskId, setAssignTaskId] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     setMe(user?.id ?? null);
 
-    const [ws, cols, ts] = await Promise.all([
+    const [ws, cols, ts, roles] = await Promise.all([
       supabase.from("workspaces").select("id, name, color, status").neq("status", "archived").order("created_at", { ascending: false }),
       supabase.from("workspace_columns").select("id, name, color, workspace_id").order("sort_order"),
       supabase.from("tasks").select("id, title, priority, due_date, workspace_id, column_id, assignee_id, status").order("updated_at", { ascending: false }).limit(200),
+      supabase.from("user_roles").select("user_id").neq("role", "client"),
     ]);
 
     setWorkspaces((ws.data ?? []) as Workspace[]);
     setTasks((ts.data ?? []) as Task[]);
 
-    // aggregate counts per column globally
+    const internalIds = Array.from(new Set((roles.data ?? []).map((r: any) => r.user_id)));
+    if (internalIds.length) {
+      const { data: profs } = await supabase.from("profiles").select("id, full_name, email").in("id", internalIds);
+      setAdmins((profs ?? []) as Admin[]);
+    }
+
     const colArr: ColumnAgg[] = (cols.data ?? []).map((c: any) => ({
       ...c,
       count: (ts.data ?? []).filter((t: any) => t.column_id === c.id).length,
@@ -64,15 +74,17 @@ const AdminTasks = () => {
     return acc;
   }, {});
 
-  const myActive = filteredTasks.filter((t) => t.assignee_id === me && t.status === "in_progress").slice(0, 5);
   const myAssigned = filteredTasks.filter((t) => t.assignee_id === me && t.status !== "closed");
-  const pendingReview = filteredTasks.filter((t) => {
-    const col = columns.find((c) => c.id === t.column_id);
-    return col?.name.toLowerCase().includes("review");
-  }).slice(0, 5);
+  const unassigned = filteredTasks.filter((t) => !t.assignee_id && t.status !== "closed");
+  const teamAssigned = filteredTasks.filter((t) => t.assignee_id && t.assignee_id !== me && t.status !== "closed");
 
   const wsName = (id: string | null) => workspaces.find((w) => w.id === id)?.name ?? "—";
   const wsColor = (id: string | null) => workspaces.find((w) => w.id === id)?.color ?? "#94a3b8";
+  const adminName = (id: string | null) => {
+    if (!id) return null;
+    const a = admins.find((x) => x.id === id);
+    return a?.full_name ?? a?.email ?? null;
+  };
 
   return (
     <div className="space-y-6">
@@ -138,86 +150,101 @@ const AdminTasks = () => {
         )}
       </div>
 
-      {/* What I'm working on now */}
+      {/* Mis tareas (assigned to me) — always shown */}
       <Card>
         <CardContent className="p-5 space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold flex items-center gap-2"><Zap className="h-4 w-4 text-primary" /> En lo que trabajo ahora</h2>
-            <Badge variant="secondary">{myActive.length}</Badge>
+            <h2 className="font-semibold flex items-center gap-2"><ListChecks className="h-4 w-4 text-primary" /> Mis tareas</h2>
+            <Badge variant="secondary">{myAssigned.length}</Badge>
           </div>
           <div className="divide-y">
-            {myActive.map((t) => (
-              <div key={t.id} className="flex items-center justify-between py-2.5 gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: wsColor(t.workspace_id) }} />
-                  <Link to={t.workspace_id ? `/admin/tasks/workspaces/${t.workspace_id}` : "#"} className="text-sm font-medium truncate hover:underline">{t.title}</Link>
-                  <span className="text-xs text-muted-foreground hidden md:inline">· {wsName(t.workspace_id)}</span>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <StatusBadge value={t.priority} options={PRIORITIES} />
-                  {t.due_date && (
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      <CalendarIcon className="h-3 w-3" />
-                      {new Date(t.due_date).toLocaleDateString()}
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
-            {myActive.length === 0 && (
-              <p className="text-sm text-muted-foreground py-4 text-center">No tienes tareas en progreso.</p>
+            {myAssigned.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4 text-center">No tenés tareas asignadas.</p>
+            ) : (
+              myAssigned.slice(0, 10).map((t) => (
+                <TaskRow key={t.id} task={t} wsName={wsName(t.workspace_id)} wsColor={wsColor(t.workspace_id)} />
+              ))
             )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Two columns */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* Sin asignar (head's inbox; admin sees global unassigned) */}
+      {unassigned.length > 0 && (
         <Card>
           <CardContent className="p-5 space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="font-semibold flex items-center gap-2"><ListChecks className="h-4 w-4 text-primary" /> Mis tareas asignadas</h2>
-              <Badge variant="secondary">{myAssigned.length}</Badge>
+              <h2 className="font-semibold flex items-center gap-2"><Inbox className="h-4 w-4 text-primary" /> Sin asignar</h2>
+              <Badge variant="outline">{unassigned.length}</Badge>
             </div>
-            <div className="divide-y max-h-[400px] overflow-y-auto">
-              {myAssigned.slice(0, 10).map((t) => (
-                <Link to={t.workspace_id ? `/admin/tasks/workspaces/${t.workspace_id}` : "#"} key={t.id} className="flex items-center justify-between py-2.5 gap-3 hover:bg-muted/30 px-2 rounded">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: wsColor(t.workspace_id) }} />
-                    <span className="text-sm truncate">{t.title}</span>
-                  </div>
-                  <StatusBadge value={t.priority} options={PRIORITIES} />
-                </Link>
-              ))}
-              {myAssigned.length === 0 && <p className="text-sm text-muted-foreground py-4 text-center">Sin asignaciones.</p>}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-5 space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="font-semibold flex items-center gap-2"><Eye className="h-4 w-4 text-primary" /> Pendientes de revisión</h2>
-              <Badge variant="secondary">{pendingReview.length}</Badge>
-            </div>
-            <div className="divide-y">
-              {pendingReview.map((t) => (
-                <Link to={t.workspace_id ? `/admin/tasks/workspaces/${t.workspace_id}` : "#"} key={t.id} className="flex items-center justify-between py-2.5 gap-3 hover:bg-muted/30 px-2 rounded">
-                  <div className="flex items-center gap-2 min-w-0">
+            <p className="text-xs text-muted-foreground">
+              Tareas de tu departamento que todavía no tienen responsable. Hacé clic en "Asignar" para distribuirlas.
+            </p>
+            <div className="divide-y max-h-[480px] overflow-y-auto">
+              {unassigned.map((t) => (
+                <div key={t.id} className="flex items-center justify-between py-2.5 gap-3">
+                  <Link to={t.workspace_id ? `/admin/tasks/workspaces/${t.workspace_id}` : "#"} className="flex items-center gap-2 min-w-0 flex-1 hover:bg-muted/30 -mx-2 px-2 py-1 rounded">
                     <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: wsColor(t.workspace_id) }} />
                     <div className="min-w-0">
                       <p className="text-sm truncate">{t.title}</p>
                       <p className="text-xs text-muted-foreground">{wsName(t.workspace_id)}</p>
                     </div>
+                  </Link>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <StatusBadge value={t.priority} options={PRIORITIES} />
+                    {t.due_date && (
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <CalendarIcon className="h-3 w-3" />
+                        {new Date(t.due_date).toLocaleDateString()}
+                      </span>
+                    )}
+                    <Button size="sm" variant="outline" onClick={() => setAssignTaskId(t.id)}>
+                      <UserPlus className="h-3.5 w-3.5 mr-1" /> Asignar
+                    </Button>
                   </div>
-                  <Button size="sm" variant="outline">Revisar</Button>
-                </Link>
+                </div>
               ))}
-              {pendingReview.length === 0 && <p className="text-sm text-muted-foreground py-4 text-center">Nada por revisar.</p>}
             </div>
           </CardContent>
         </Card>
-      </div>
+      )}
+
+      {/* Asignadas al equipo (visible to head/admin only — analysts won't see others' tasks) */}
+      {teamAssigned.length > 0 && (
+        <Card>
+          <CardContent className="p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold flex items-center gap-2"><Users className="h-4 w-4 text-primary" /> Asignadas al equipo</h2>
+              <Badge variant="outline">{teamAssigned.length}</Badge>
+            </div>
+            <div className="divide-y max-h-[480px] overflow-y-auto">
+              {teamAssigned.map((t) => (
+                <Link to={t.workspace_id ? `/admin/tasks/workspaces/${t.workspace_id}` : "#"} key={t.id} className="flex items-center justify-between py-2.5 gap-3 hover:bg-muted/30 px-2 rounded">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: wsColor(t.workspace_id) }} />
+                    <div className="min-w-0">
+                      <p className="text-sm truncate">{t.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {wsName(t.workspace_id)} · {adminName(t.assignee_id) ?? "—"}
+                      </p>
+                    </div>
+                  </div>
+                  <StatusBadge value={t.priority} options={PRIORITIES} />
+                </Link>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <TaskAssignDialog
+        taskId={assignTaskId}
+        taskTitle={tasks.find((t) => t.id === assignTaskId)?.title}
+        currentAssigneeId={tasks.find((t) => t.id === assignTaskId)?.assignee_id ?? null}
+        admins={admins}
+        onClose={() => setAssignTaskId(null)}
+        onSaved={load}
+      />
 
       {/* My Workspaces strip */}
       <Card>
@@ -252,5 +279,29 @@ const AdminTasks = () => {
     </div>
   );
 };
+
+const TaskRow = ({ task, wsName, wsColor }: { task: Task; wsName: string; wsColor: string }) => (
+  <Link
+    to={task.workspace_id ? `/admin/tasks/workspaces/${task.workspace_id}` : "#"}
+    className="flex items-center justify-between py-2.5 gap-3 hover:bg-muted/30 -mx-2 px-2 rounded"
+  >
+    <div className="flex items-center gap-2 min-w-0">
+      <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: wsColor }} />
+      <div className="min-w-0">
+        <p className="text-sm truncate">{task.title}</p>
+        <p className="text-xs text-muted-foreground">{wsName}</p>
+      </div>
+    </div>
+    <div className="flex items-center gap-2 shrink-0">
+      <StatusBadge value={task.priority} options={PRIORITIES} />
+      {task.due_date && (
+        <span className="text-xs text-muted-foreground flex items-center gap-1">
+          <CalendarIcon className="h-3 w-3" />
+          {new Date(task.due_date).toLocaleDateString()}
+        </span>
+      )}
+    </div>
+  </Link>
+);
 
 export default AdminTasks;

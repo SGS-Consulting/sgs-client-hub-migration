@@ -1,9 +1,9 @@
 # SOP-04 Tax & Compliance Strategy — Dashboard Design
 
-**Status:** Pre-draft — questions for Germain (some cross-cutting with Abner). Not yet reviewed.
+**Status:** **LOCKED 2026-05-01** with Germain + Abner (verbal sync via Javi). All non-Karen sections answered. §8 (one-time variant) remains BLOCKED — Germain/Abner did not converge on the SOP-03/SOP-04 tax-season boundary; logged to keep moving.
 **Reference:** `Processos_internos/04_impuestos_compliance/sop.md`
 **Pipeline (GHL):** `Tax & Compliance Strategy`
-**Last updated:** 2026-04-30
+**Last updated:** 2026-05-01
 
 ---
 
@@ -15,24 +15,28 @@
 
 ---
 
-## Quick reference — default proposals
+## Quick reference — locked answers (2026-05-01)
 
-| Area | Default (confirm with Germain) |
-|------|--------------------------------|
-| Activation paths | Both: SOP-00 onboarding *and* upsell on existing client (same as SOP-03) |
-| Billing | Auto-invoice on activation; client must pay before first month (same as SOP-03) |
-| Pricing model | Flat $5,000/mo per managed company (per global pricing model in `Processos_internos/CLAUDE.md` §5); confirm not tiered like SOP-03 |
-| Worker data model | New `client_workers` table — admin-managed, client can view summary (no SSN), W-9 attached as document |
-| Worker classification | Per-worker boolean `is_contractor` set by Germain at intake; backed by Abner-defined policy doc (currently missing) |
-| W-9 collection | Client uploads completed W-9 PDF (free-form upload, same pattern as SOP-01/03); structured form deferred to v2 |
-| 1099 generation | Manual upload by Germain at year-end (PDF per contractor); auto-gen deferred until W-9 fields are structured |
-| Initial tax-strategy meeting | Internal-only `client_meetings` row with `kind='tax_strategy_initial'`; one-time on activation |
-| Quarterly tax-strategy meeting | Recurring task spawns quarterly (reuses SOP-03 recurring-task mechanic); creates `client_meetings` row with `kind='tax_strategy_quarterly'` |
-| Tax-strategy notes | New table `tax_strategies` (per-client, internal-only) capturing strategies identified + outcomes per quarter |
-| Monthly worker DB maintenance | Recurring task spawned monthly; admin reviews `client_workers`, requests W-9 from new ones, marks departed |
-| Client portal | Workers tab where client manages their team list (excluding SSN); 1099 download once available; quarterly meeting summary read-only |
+| Area | Decision |
+|------|----------|
+| Activation paths (standalone) | Both: SOP-00 onboarding *and* upsell on existing client |
+| Activation paths (bundled) | **Auto-spawned when client activates one of the 3 recurring SOP-03 tiers** (Managed Accounting 1/2/3+ Companies); auto-deactivated when SOP-03 is deactivated |
+| Pricing model | **Not separately charged** when bundled with SOP-03 recurring; **case-by-case price** when sold standalone (Abner sets per-client at activation, like other one-time SGS services). Tax-season-only SOP-03 variant does NOT include SOP-04. |
+| Billing | Standalone: auto-invoice on activation, client must pay before Step 1. Bundled: no separate invoice (rolled into SOP-03 monthly fee). |
+| Worker data model | New `client_workers` table — **symmetric CRUD: both client and Germain can add/edit/terminate workers**; full audit trail (who changed what, when) on every mutation. SSN/EIN never visible to client. |
+| Worker classification | **IRS Common Law Test** — 5–7 question intake checklist per worker; answers stored on the worker record so the decision is auditable later. Per-worker boolean `is_contractor` derived from the answers. |
+| W-9 collection | **Client sends a tokenized form to each worker** (worker fills the structured form via a public anonymous link, similar to `/intake`); system stores structured fields and can auto-generate the W-9 PDF. Workers do NOT have portal accounts — token-based form access only. |
+| 1099 generation (v1) | **Manual upload by Germain at year-end** (PDF per contractor); client downloads from portal + email notification. Electronic delivery only (no USPS paper mail in v1). Auto-gen deferred to v1.5 (requires QuickBooks API integration — separate slice). |
+| IRS submission tracking | Out of scope for v1 dashboard; Germain handles outside the system. Capture `filed_with_irs_at TIMESTAMPTZ` on a small `tax_filings` log table. |
+| Initial tax-strategy meeting | Internal-only `discovery_sessions` row with `kind='tax_strategy_initial'` — one-time on activation. |
+| Quarterly tax-strategy meeting | **Quarterly recurring**, internal only (Abner + Germain), no Calendly self-scheduling. Spawned via `service_recurring_tasks`; outcome captured in dashboard, updates `tax_strategies`. |
+| Tax-strategy notes | New table `tax_strategies` (per-client, internal-only) capturing strategies identified + outcomes per quarter. |
+| Tax-strategy client visibility | **High-level only** — client sees a "N tax strategies in place" count badge on their SOP-04 card. Strategy specifics, rationale, and savings estimates are internal-only. |
+| Monthly worker DB maintenance | Recurring task spawned monthly; admin reviews `client_workers`, requests W-9s from new ones (sends tokenized form), marks departed. No automatic stale-worker flag in v1. |
+| Client portal | Workers tab — client adds/edits/terminates workers; sees W-9 status per worker; downloads 1099s when available; sees high-level strategy count on the SOP-04 card. No tasks, no SSN, no strategy details. |
+| Internal-only task flag | **NOT NEEDED** — clients have no SELECT policy on `tasks` (architecture-level: clients never see tasks; surfaces are service cards / docs / queries / notifications). See §9. |
 | GHL pipeline | Stages TBD with Karen (placeholder: Activated → Workers Configured → Active recurring → Cancelled) |
-| One-time tax-filing variant | **BLOCKED** — pending cross-SOP boundary resolution (see Hard blockers §2) |
+| One-time tax-filing variant (§8) | **STILL BLOCKED** — Germain + Abner did not converge on the SOP-03/SOP-04 tax-season boundary in this round; logged as remaining open question (see §8 + `pain_points.md` 2026-04-29). |
 
 ---
 
@@ -128,9 +132,30 @@ client_workers (
 
 ### 2.4 What about the worker's role in the process?
 
-**Default proposal:** Workers are **not portal users.** SGS deals with the client; the client deals with their workers. The client either uploads W-9s on each worker's behalf or forwards a magic link to the worker — open question.
+**LOCKED 2026-05-01:** Workers are **not portal users** (no login, no dashboard access). They DO interact with the system through a single tokenized form link to fill out their W-9 (see §2.5). Once the W-9 is submitted, the worker has no further interaction.
 
-**Status:** OPEN — confirm with Germain whether workers need their own minimal portal access (lean: no, for v1 the client manages everything).
+---
+
+### 2.5 Worker W-9 collection — tokenized form workflow
+
+**LOCKED 2026-05-01.** Replaces the original §2.3 "client uploads completed W-9 PDF" approach. The flow:
+
+1. **Client adds worker** to their portal (name, email, type).
+2. **Client clicks "Request W-9"** on the worker record. System generates a one-time-use signed token, writes a `worker_w9_invites` row, queues an email (template `worker_w9_request`) addressed to the **worker** (not the client) with a magic link to `/w9/<token>`.
+3. **Worker opens the link** (no login required, public route similar to `/intake`). Renders a structured W-9 form: legal name, business name, federal tax classification (sole prop / single-member LLC / C-Corp / S-Corp / partnership / trust / other), exemptions, address, requester info, TIN (SSN or EIN), signature (typed acknowledgment + IP/timestamp).
+4. **Worker submits.** Edge Function (or RPC with anon JWT) validates the token, writes the structured fields to `client_workers_w9_data` (or JSONB column), marks the invite `completed`, and either auto-generates the W-9 PDF and stores it under the worker's record, or stores just the structured data and renders the PDF on demand.
+5. **Germain sees "W-9 received"** on the worker record + verifies; once verified, the W-9 is "on file."
+6. **Token expires** after N days (default 30) or single use; client can re-request.
+
+**Build implications:**
+- New table `worker_w9_invites` (id, worker_id, token, expires_at, status, sent_at, completed_at).
+- New public route `/w9/<token>` (no auth) — analogous to `/intake`.
+- New Edge Function (or anon RPC) for token validation + W-9 ingest.
+- Structured W-9 fields stored either on `client_workers` (JSONB) or in a separate `client_workers_w9_data` table (cleaner separation; admin-only RLS).
+- Email template `worker_w9_request` targets the **worker's email**, not the client.
+- PDF generation: lazy on-demand (server-side render) for v1 — no need to pre-generate every PDF.
+
+**Why this matters:** with structured W-9 data we can later auto-generate 1099s (currently deferred to v1.5 per Q2.4 — needs QuickBooks payment integration to know amounts paid per contractor).
 
 ---
 
@@ -294,9 +319,9 @@ No new mechanics needed. SOP-04 reuses everything built in SOP-03 §9:
 - `service_recurring_tasks` table — adds rows for SOP-04 (Step 4 quarterly meeting, Step 5 monthly worker DB review, year-end 1099 task).
 - `spawn_recurring_tasks()` cron — already runs daily, picks up SOP-04 task definitions automatically.
 
-**Internal-only flag:** SOP-04 introduces internal-only meetings (Step 3 + Step 4). Need a `is_internal BOOLEAN` flag on either `service_recurring_tasks` or the spawned tasks themselves so RLS hides them from the client portal. Same flag should also be added to `tasks` table if not already present from SOP-01 (verify before designing the migration).
+**Internal-only flag:** **NOT NEEDED.** Verified 2026-05-01: the architecture punted client task-visibility from the baseline migration (`20260426032128…sql:427` comment: `-- Clients do NOT see internal tasks`) — clients have no SELECT policy on `tasks` and never see them in the portal. SOP-00, SOP-01, SOP-03 all surface client-facing work via service cards, document tabs, queries, notifications — not via a client-side task list. SOP-04 follows the same pattern (§6.2 Workers tab, 1099 download, classification status — no task list). So Step 3 + Step 4 internal-only meetings are hidden from the client by virtue of *all* tasks being hidden; no per-task flag required. Confirmed permanent design choice with Javi 2026-05-01.
 
-**Status:** OPEN — verify the internal-only flag exists on tasks. If not, schema change required (small).
+**Status:** RESOLVED 2026-05-01 — no schema change.
 
 ---
 
@@ -363,55 +388,89 @@ Same architecture as SOP-03 §10.3 — emails route through `email_log` rows wit
 
 ### Seed (proposed `supabase/seeds/sop04_tax_compliance.sql`)
 
-- 1 service row: "Tax & Compliance Strategy — Recurring" at $5,000/mo (placeholder until §11.1 confirmed).
-- Task templates for SOP-04 onboarding (one-time):
-  - Schedule initial tax-strategy meeting (high, +3d, internal)
-  - Collect existing worker list from client (high, +5d)
-  - Run worker classification on each worker (high, +10d, internal)
-  - Request W-9s for newly-classified contractors (high, +15d)
+- 1 service row: **`Tax & Compliance Strategy`** with `base_price = 0` (zero-priced because bundled with SOP-03 recurring tiers; admins set a per-client override on `client_services.price_override` for standalone sales — adds new column).
+- Auto-activation cascade: when an admin activates a recurring SOP-03 tier (`Managed Accounting — 1/2/3+ Companies`), system auto-activates a SOP-04 `client_services` row for the same client at $0; when SOP-03 is deactivated, SOP-04 is auto-deactivated. Implemented as app-code in `AdminClientDetail.activateService` / `deactivateService` (consistent with current SOP-03 pattern). Tax-Season Bookkeeping does NOT auto-spawn SOP-04.
+- Task templates for SOP-04 onboarding (one-time, all internal — clients don't see tasks):
+  - Schedule initial tax-strategy meeting (high, +3d)
+  - Collect existing worker list from client (high, +5d) — but most workers will be added by client directly via portal
+  - Run IRS-Common-Law-Test classification per worker (high, +10d)
+  - Confirm all required W-9s requested (high, +15d)
 - Recurring tasks (`service_recurring_tasks`):
-  - Quarterly tax-strategy meeting (cadence: quarterly, day 5, internal)
-  - Monthly worker DB review (cadence: monthly, day 1, internal)
-  - Year-end 1099 generation + send (cadence: annually, December 1, internal+external split — TBD)
+  - Quarterly tax-strategy meeting (cadence: quarterly, day 5)
+  - Monthly worker DB review (cadence: monthly, day 1)
+  - Year-end 1099 generation + send (cadence: annually, December 1)
+
+### Database — new tables (proposed migration `<timestamp>_sop04_slice_schema.sql`)
+
+- **`client_workers`** — per-client worker roster. Fields per §2.2 plus `created_by`/`updated_by` and a paired `client_workers_audit` log table (or trigger-based `client_workers_history` table) for the audit trail (Q2.2 hybrid CRUD requires it).
+- **`worker_classification_responses`** — IRS Common Law Test answers per worker (5–7 questions; one row per worker). Drives `client_workers.is_contractor`.
+- **`worker_w9_invites`** — tokenized form invites (token, expires_at, status, sent_at, completed_at). One row per "Request W-9" click.
+- **`client_workers_w9_data`** *(or JSONB column on `client_workers`)* — structured W-9 fields submitted via the worker form. Admin-only RLS.
+- **`tax_strategies`** — per §4.2 schema. Internal-only.
+- **`tax_filings`** — small audit log (`filing_year`, `filed_with_irs_at`, `extension_requested_at`, `filing_method`, etc.) per §3.3.
+- **Add columns/enums:**
+  - `discovery_sessions.kind` CHECK extended with `tax_strategy_initial`, `tax_strategy_quarterly`.
+  - `documents.category` enum: add `w9_form`, `1099_form`.
+  - `client_services.price_override NUMERIC NULL` — for standalone SOP-04 sales (Abner's case-by-case price; null means use `services.base_price`).
+- **RLS:** admin-only for `worker_classification_responses`, `client_workers_w9_data`, `tax_strategies`, `tax_filings`, `worker_w9_invites`. Client SELECT/INSERT/UPDATE on `client_workers` (their own); cannot SELECT W-9 data or classification responses. The `/w9/<token>` route bypasses RLS via Edge Function with service role.
+- **No `is_internal` flag on tasks** — see §9 (architecture-level: clients never see tasks).
+
+### Seed (proposed `supabase/seeds/sop04_tax_compliance.sql`)
+
+- 1 service row: `Tax & Compliance Strategy` at `base_price = 0`.
+- 4 onboarding task templates (above).
+- 3 recurring task definitions (above).
+- 4 IRS Common Law Test default questions (or seed them when the migration creates `worker_classification_questions`).
+- 3 email templates: `worker_w9_request` (to worker), `1099_ready` (to client), `quarterly_strategy_review_summary` (optional, internal).
 
 ### Edge Functions
 
-- No new edge functions required for the recurring service — reuses `spawn-recurring-tasks` (SOP-03) and `email_log → GHL` dispatch (Phase 2).
+- **NEW: `worker-w9-submit`** — public (no JWT), validates the token from `worker_w9_invites`, ingests structured form payload, writes to `client_workers_w9_data`, marks invite `completed`, returns success. Pattern: same as the planned `intake-submit` but token-scoped.
+- Reuses `spawn-recurring-tasks` (SOP-03) and `email_log → GHL` dispatch (Phase 2 — GHL fires the `worker_w9_request` email).
 - One-time variant (§8) may need a tax-firm coordination function if it ends up looking like SOP-03 §8.3 — defer until §8 unblocks.
 
 ### Admin UI
 
 - SOP-04 service card on `AdminClientDetail` showing: worker count + W-9-collected ratio, classification status, last quarterly meeting, next 1099 deadline countdown.
-- New `Workers` panel in admin per-client view: list of `client_workers` with classification, W-9 status, 1099 status; add/edit/terminate actions.
+- New `Workers` panel in admin per-client view: list of `client_workers` with classification, W-9 status, 1099 status; add/edit/terminate actions; "Request W-9" button per worker.
 - New `tax_strategies` list per client (internal-only): summary of strategies, status, expected savings.
+- Audit-log viewer for `client_workers` changes (per the audit-trail requirement from Q2.2).
 - Updates to global recurring-task admin views — no SOP-specific work, just inherit from SOP-03 mechanics.
 
 ### Client UI
 
-- New `/portal/workers` page (or tab inside `ClientServices.tsx`): list workers, add new, mark departed, upload W-9, download 1099 (when available). No SSN, no classification visible.
-- SOP-04 service card on `/portal/services` showing: workers count, W-9 status indicator, 1099 readiness indicator.
+- New `Workers` tab inside `ClientServices.tsx` (or a separate `/portal/workers` route): list workers, add new, edit, mark departed; per-worker W-9 status + "Request W-9" button (sends the tokenized form to the worker). No SSN, no classification visible. Audit log viewable.
+- New PUBLIC route `/w9/<token>` — anonymous structured W-9 form, single-use.
+- SOP-04 service card on `/portal/services` showing: workers count, W-9 status indicator, 1099 readiness indicator, "N tax strategies in place" count badge.
 
 ### Estimated scope
 
-5–7 sessions for the recurring service (similar to SOP-03), assuming all §2–§7 questions are answered and the internal-only flag work is small. The one-time variant (§8) is a separate ~2-session slice once unblocked.
+**~7–9 sessions** for the locked v1 (was 5–7 in pre-draft; bumped because of the worker-tokenized-form workflow + audit trail + auto-activation cascade). Breakdown:
+- Migration + seed: ~1 session
+- `client_workers` admin + client CRUD with audit: ~1.5 sessions
+- IRS Common Law Test classification wizard: ~1 session
+- Worker W-9 tokenized form + Edge Function + structured field rendering: ~2 sessions
+- Tax-strategy meetings + `tax_strategies` table + recurring tasks: ~1 session
+- 1099 manual upload + client download UX: ~0.5 session
+- Auto-activation cascade with SOP-03 + standalone sale UX: ~0.5 session
+- Smoke test + UI polish: ~0.5 session
+
+**Excluded (separate slices):**
+- 1099 auto-generation from system data — needs QuickBooks API integration (Phase 2-ish, ~3–4 sessions of its own).
+- One-time tax-filing variant (§8) — still BLOCKED on the SOP-03/SOP-04 boundary.
 
 ---
 
-## Open questions for Germain (prioritized)
+## Open questions — remaining
 
-1. §2.1 — Worker classification policy (cross-cutting with **Abner**; this is the hardest blocker).
-2. §2.2 — Worker data model approval — `client_workers` table shape OK?
-3. §2.3 — W-9 collection: client-uploads-PDF default OK for v1?
-4. §3.1 — 1099 generation: manual upload OK for v1?
-5. §4.2 — Tax-strategy notes: `tax_strategies` table OK; client-visibility level (§7.2)?
-6. §6.2 — Client-managed vs. admin-managed worker list?
-7. §11.1 — Flat $5,000/mo per company, not tiered — confirmed?
-8. §8 cross-SOP boundary (cross-cutting with **Abner**) — when can we get this resolved?
-
-## Open questions for Karen
-
+**For Karen (non-blocking; can be wired during Phase 2 GHL bridge):**
 1. §10.1 — GHL pipeline stages for SOP-04?
 2. §10.2 — GHL custom fields needed?
+
+**For Germain + Abner (blocks §8 only — recurring SOP-04 v1 is unblocked):**
+3. §8 — SOP-03 vs SOP-04 tax-season boundary. Did not converge in 2026-05-01 sync. Logged as remaining open question; revisit in a dedicated 15-min sync between Germain + Abner.
+
+**All other questions: ANSWERED 2026-05-01 (see Decision log below).**
 
 ## Reusable mechanics inherited from prior slices (no design needed)
 
@@ -434,4 +493,25 @@ Same architecture as SOP-03 §10.3 — emails route through `email_log` rows wit
 
 | Date | Section | Decider | Answer |
 |------|---------|---------|--------|
-| _all OPEN — pre-draft_ | | | |
+| 2026-05-01 | §1.1 (activation paths) | Germain (via Javi) | C — both: SOP-00 onboarding *and* upsell on existing clients (applies only to standalone sales; bundled SOP-04 auto-spawns when SOP-03 recurring tier activates). |
+| 2026-05-01 | §1.2 / §11.2 (billing trigger) | Germain (via Javi) | A — auto-invoice on activation, client must pay before Step 1. Applies only to standalone sales; bundled SOP-04 has no separate invoice. |
+| 2026-05-01 | §11.1 (pricing model) | Germain (via Javi) | **NOT separately charged** when bundled with SOP-03 recurring tiers (1/2/3+ Companies). **Case-by-case price** when sold standalone (Abner sets per-client at activation). Tax-Season SOP-03 variant does NOT include SOP-04. |
+| 2026-05-01 | §11.3 (pause/cancel) | Germain (via Javi) | A — admin deactivates from `AdminClientDetail`; stops auto-billing next cycle, past invoices stand, active workers stay in DB but no new tasks spawn. Bundled SOP-04 also auto-deactivates when SOP-03 deactivates. |
+| 2026-05-01 | §2.1 (worker classification policy) | Abner (via Javi) | A — adopt IRS Common Law Test, 5–7 question intake checklist per worker; answers stored on the worker record so the decision is auditable later. Per-worker boolean `is_contractor` derived from the answers. |
+| 2026-05-01 | §2.2 / §6.2 (worker data model + management) | Germain (via Javi) | C+ — **symmetric CRUD: both client and Germain can add/edit/terminate workers.** Full audit trail (who changed what, when) on every mutation. SSN never visible to client. |
+| 2026-05-01 | §2.3 / §2.5 (W-9 collection) | Germain (via Javi) | B — **structured form**, but with the workflow refinement: client clicks "Request W-9" → system emails worker a tokenized magic link → worker fills structured form at `/w9/<token>` → system stores structured fields + can auto-generate W-9 PDF. Workers do NOT have portal accounts; token-based form access only. See §2.5. |
+| 2026-05-01 | §2.4 (worker portal access) | Germain (via Javi) | Workers are NOT portal users. Token-based form access only (§2.5). |
+| 2026-05-01 | §3.1 (1099 generation v1) | Germain (via Javi) | A — manual upload by Germain at year-end. Auto-gen deferred to v1.5 (requires QuickBooks API integration — separate slice). |
+| 2026-05-01 | §3.2 (1099 sending) | Germain (via Javi) | A — electronic via portal download + email notification. No USPS paper mail in v1. |
+| 2026-05-01 | §3.3 (IRS submission tracking) | Germain (via Javi) | Out of scope for v1; capture only `filed_with_irs_at TIMESTAMPTZ` on `tax_filings` log table. |
+| 2026-05-01 | §4.1 (initial tax-strategy meeting) | Germain (via Javi) | Tracked as internal `discovery_sessions` row with `kind='tax_strategy_initial'`; one-time on activation. |
+| 2026-05-01 | §4.2 (tax-strategy notes table) | Germain (via Javi) | A — yes, build the `tax_strategies` table per the proposed schema. Internal-only; quarterly meetings update it. |
+| 2026-05-01 | §5.1 (quarterly meeting cadence) | Germain (via Javi) | A — quarterly recurring (cadence: quarterly, day 5), internal-only (Abner + Germain), via `service_recurring_tasks`. |
+| 2026-05-01 | §5.2 (Calendly for quarterly meeting) | Germain (via Javi) | No — internal SGS meetings, scheduled out of band; just log outcome in dashboard. |
+| 2026-05-01 | §5.3 (meeting outcome capture) | Germain (via Javi) | Same shape as `discovery_sessions.outcome_notes`; updates `tax_strategies` (flip strategy status proposed → active → implemented). |
+| 2026-05-01 | §6.1 (monthly worker DB maintenance) | Germain (via Javi) | Recurring task spawned monthly (day 1, +5d due), assigned to Germain. |
+| 2026-05-01 | §6.3 (stale-worker auto-flag) | Germain (via Javi) | No automatic flag in v1. Germain reviews monthly via the recurring task. |
+| 2026-05-01 | §7.2 (tax-strategy client visibility) | Germain (via Javi) | B — high-level only. Client sees "N tax strategies in place" count badge on the SOP-04 service card. Strategy specifics, rationale, and savings estimates are internal-only. |
+| 2026-05-01 | §8 (SOP-03 vs SOP-04 tax-season boundary) | Germain + Abner (via Javi) | E — still TBD. Did not converge. Logged as remaining open question; one-time variant §8 stays BLOCKED. |
+| 2026-05-01 | §9 (internal-only task flag) | Architecture review (Javi + Claude) | NOT NEEDED. Verified clients have no SELECT policy on `tasks` (baseline migration 20260426032128…sql:427 — `-- Clients do NOT see internal tasks`). All client surfaces use service cards / docs / queries / notifications instead of task lists. Permanent design choice confirmed by Javi 2026-05-01. |
+| 2026-05-01 | §10 (GHL pipeline) | Karen | Still pending; non-blocking — wire during Phase 2 GHL bridge. |

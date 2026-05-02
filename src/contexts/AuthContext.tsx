@@ -2,7 +2,12 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
-export type AppRole = "admin" | "finance" | "operations" | "staff" | "client";
+export type AppRole =
+  | "admin"
+  | "head_accounting" | "head_branding" | "head_it"
+  | "analyst_accounting" | "analyst_branding" | "analyst_it"
+  | "finance" | "operations" | "staff"
+  | "client";
 
 interface AuthContextValue {
   user: User | null;
@@ -18,7 +23,13 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-const PRIORITY: AppRole[] = ["admin", "finance", "operations", "staff", "client"];
+const PRIORITY: AppRole[] = [
+  "admin",
+  "head_accounting", "head_branding", "head_it",
+  "analyst_accounting", "analyst_branding", "analyst_it",
+  "finance", "operations", "staff",
+  "client",
+];
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
