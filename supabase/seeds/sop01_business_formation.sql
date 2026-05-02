@@ -26,13 +26,15 @@ BEGIN
     WHERE name = 'Business Formation & Structure'
     LIMIT 1;
 
+    -- Price is a PLACEHOLDER at $100 until SGS finalizes the v1 pricing
+    -- strategy (Karen + Abner). Original draft was $500.
     IF service_id_var IS NULL THEN
         INSERT INTO public.services (name, category, description, base_price, is_active)
         VALUES (
             'Business Formation & Structure',
             'Business Formation',
-            'One-time service: evaluate and implement the most efficient corporate structure for the client in any state. Includes coordination with SGS''s standing legal partner and delivery of a complete corporate kit. Standard $500 fixed price, billed upfront.',
-            500.00,
+            'One-time service: evaluate and implement the most efficient corporate structure for the client in any state. Includes coordination with SGS''s standing legal partner and delivery of a complete corporate kit. Placeholder price — billed upfront.',
+            100.00,
             TRUE
         )
         RETURNING id INTO service_id_var;
@@ -40,9 +42,9 @@ BEGIN
         RAISE NOTICE 'Created service "Business Formation & Structure" (id=%)', service_id_var;
     ELSE
         UPDATE public.services
-        SET base_price = 500.00, is_active = TRUE
+        SET is_active = TRUE
         WHERE id = service_id_var;
-        RAISE NOTICE 'Service "Business Formation & Structure" already existed — price reasserted to $500.';
+        RAISE NOTICE 'Service "Business Formation & Structure" already existed — kept current price (placeholder strategy).';
     END IF;
 
     -- ---------------------------------------------------------

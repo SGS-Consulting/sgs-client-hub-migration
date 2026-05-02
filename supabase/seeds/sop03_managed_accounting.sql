@@ -25,27 +25,30 @@
 -- ---------------------------------------------------------
 DO $$
 BEGIN
+    -- Prices below are PLACEHOLDERS at $100 until SGS finalizes the v1
+    -- pricing strategy (Karen + Abner + Germain). Original tier draft was
+    -- $5000/$7500/$10000/$2000 — kept in git history for reference.
     INSERT INTO public.services (name, category, description, base_price, is_active)
     SELECT t.name, t.category, t.description, t.base_price, TRUE
     FROM (VALUES
         ('Managed Accounting — 1 Company', 'Accounting',
             'Recurring monthly bookkeeping, QuickBooks management, monthly meetings, quarterly P&L reporting, October IUL review, and tax-firm document handoff. Standard tier for clients with one company.',
-            5000.00),
+            100.00),
         ('Managed Accounting — 2 Companies', 'Accounting',
             'Recurring monthly accounting service across two managed companies. Same scope as the single-company tier, scaled.',
-            7500.00),
+            100.00),
         ('Managed Accounting — 3+ Companies', 'Accounting',
             'Recurring monthly accounting for clients with three or more managed companies. Includes consolidated reporting where applicable.',
-            10000.00),
+            100.00),
         ('Tax-Season Bookkeeping (One-Time)', 'Accounting',
             'One-time bookkeeping service for clients who only engage SGS during tax season — gets the books in order and routes documents to the third-party accounting firm for filing. Single flat charge.',
-            2000.00)
+            100.00)
     ) AS t(name, category, description, base_price)
     WHERE NOT EXISTS (
         SELECT 1 FROM public.services existing WHERE existing.name = t.name
     );
 
-    RAISE NOTICE 'SOP-03 services seeded (or already existed). Prices are PLACEHOLDERS — confirm with Germain.';
+    RAISE NOTICE 'SOP-03 services seeded (or already existed). Prices are PLACEHOLDERS at $100 — finalize with Germain before going live.';
 END $$;
 
 -- ---------------------------------------------------------

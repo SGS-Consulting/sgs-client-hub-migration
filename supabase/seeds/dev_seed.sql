@@ -91,30 +91,32 @@ END $$;
 INSERT INTO public.services (name, category, description, base_price, is_active)
 SELECT s.name, s.category, s.description, s.base_price, s.is_active
 FROM (VALUES
+    -- Prices below are PLACEHOLDERS at $100 until SGS finalizes the v1
+    -- pricing strategy (Karen + Abner). Original drafts kept in git history.
     ('LLC Formation', 'Business Formation',
         'Delaware LLC formation including state filing and operating agreement.',
-        500.00, TRUE),
+        100.00, TRUE),
     ('C-Corp Formation', 'Business Formation',
         'Delaware C-Corp formation including state filing and bylaws.',
-        700.00, TRUE),
+        100.00, TRUE),
     ('EIN Application', 'Business Formation',
         'Federal Employer Identification Number application with the IRS.',
         100.00, TRUE),
     ('Registered Agent (Annual)', 'Compliance',
         'Delaware registered agent service, billed annually.',
-        150.00, TRUE),
+        100.00, TRUE),
     ('Bookkeeping (Monthly)', 'Accounting',
         'Legacy generic bookkeeping service — superseded by SOP-03 Managed Accounting tiers. Kept inactive for backward compat.',
-        350.00, FALSE),
+        100.00, FALSE),
     ('Tax Filing — Federal', 'Tax',
         'Legacy federal tax filing service — will be superseded by SOP-04 once that slice ships. Kept inactive.',
-        800.00, FALSE),
+        100.00, FALSE),
     ('Tax Filing — State', 'Tax',
         'Legacy state tax filing service — will be superseded by SOP-04 once that slice ships. Kept inactive.',
-        300.00, FALSE),
+        100.00, FALSE),
     ('Business Banking Setup', 'Banking',
         'Guidance and assistance opening US business bank accounts (Mercury, Relay, etc.).',
-        200.00, TRUE)
+        100.00, TRUE)
 ) AS s(name, category, description, base_price, is_active)
 WHERE NOT EXISTS (
     SELECT 1 FROM public.services existing WHERE existing.name = s.name
