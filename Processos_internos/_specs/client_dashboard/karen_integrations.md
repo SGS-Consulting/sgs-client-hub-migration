@@ -2,7 +2,7 @@
 
 **Audiencia:** Karen (Head of IT, líder del proyecto SGS Client Hub).
 **Autor:** Javi + Claude.
-**Última actualización:** 2026-05-01.
+**Última actualización:** 2026-05-02.
 
 Este documento lista todo lo que el dashboard necesita conectar con plataformas externas (GoHighLevel, Stripe, Calendly, etc.) para funcionar end-to-end. Está organizado por sistema, en orden de dependencia: lo que tiene que hacerse primero está arriba.
 
@@ -87,6 +87,20 @@ Creá un **Supabase de SGS** nuevo:
    - `20260429200021_sop03_slice_schema.sql`
    - `20260429204940_sop03_semi_annual_report.sql`
    - `20260429205220_sop03_cron_schedulers.sql`
+   - `20260501121841_sop04_slice_schema.sql`
+   - `20260501135354_w9_status_for_client.sql`
+   - `20260501140214_tax_strategies_client_count.sql`
+   - `20260501140641_documents_worker_link.sql`
+   - `20260501141205_client_services_auto_activated.sql`
+   - `20260502121033_sop02_slice_schema.sql`
+   - `20260502122004_sop05_slice_schema.sql`
+   - `20260502150000_sop07_advisory_schema.sql`
+   - `20260502150100_sop06_insurance_schema.sql`
+   - `20260502150200_sop09_branding_schema.sql`
+   - `20260502160000_workspaces_per_client.sql`
+   - `20260502170000_task_progress_auto.sql`
+   - `20260502180000_role_hierarchy.sql`
+   - `20260502190000_task_dept_scoping.sql`
 
    Se aplican con: `npx supabase db push --include-all` después de hacer `npx supabase link --project-ref <tu-project-ref>`.
 
@@ -95,6 +109,10 @@ Creá un **Supabase de SGS** nuevo:
    - `sop00_onboarding_templates.sql`
    - `sop01_business_formation.sql`
    - `sop03_managed_accounting.sql`
+   - `sop02_delaware_infrastructure.sql`
+   - `sop04_tax_compliance.sql`
+   - `sop05_legal_support.sql`
+   - `dev_seed_team.sql` — usuarios de prueba del equipo interno. **OJO:** solo para dev. Reemplazar con invitaciones reales antes de producción.
 
 4. **Habilitar la extensión `pg_cron`** en el dashboard de Supabase (Database → Extensions → buscá pg_cron → enable). El último migration intenta habilitarla pero a veces requiere permisos de super-admin que la migración no tiene.
 
@@ -104,6 +122,12 @@ Creá un **Supabase de SGS** nuevo:
    - **Site URL:** `https://dashboard.sgsconsulting.net`
 
 6. **Service role key** (lo necesita la Edge Function `invite-portal-user`): viene auto-disponible en las Edge Functions, no hay que setearla manualmente.
+
+7. **Deploy de Edge Functions:** además de `invite-portal-user` y `calendly-webhook`, ahora hay una nueva:
+   - `worker-w9` — recibe y persiste formularios W-9 de workers. Es pública (`verify_jwt=false` ya configurado en `supabase/config.toml`). Deploy con:
+     ```
+     npx supabase functions deploy worker-w9 --linked
+     ```
 
 ### Variables de entorno que el dashboard espera
 
@@ -142,8 +166,13 @@ Cada SOP tiene un pipeline. Los nombres y etapas vienen de los `sop.md` y los `s
 |-----|----------------------------|-----------------------------|
 | SOP-00 | `Client Onboarding` | Submitted → Reviewed → Discovery scheduled → Proposal sent → Paid → Active |
 | SOP-01 | `Business Formation & Structure` | Activated → Awaiting docs → Evaluating → With law firm → Kit delivered → Closed |
+| SOP-02 | `Delaware Infrastructure` | Por definir — dashboard listo para recibir valores en `ghl_pipeline_stage` |
 | SOP-03 | `Managed Accounting & Financial Operations` | Activated → QB setup → Active recurring → Cancelled |
-| SOP-04, 05, 06, 07, 09 | Por definir cuando esos SOPs entren en construcción | — |
+| SOP-04 | `Tax & Compliance` | Por definir — dashboard listo para recibir valores en `ghl_pipeline_stage` |
+| SOP-05 | `Legal Support` | Por definir — dashboard listo para recibir valores en `ghl_pipeline_stage` |
+| SOP-06 | `Risk & Insurance` | Por definir — **bloqueado**: pendiente definir si la correduría de seguros es la misma que SOP-02 |
+| SOP-07 | `Business Advisory` | Por definir — dashboard listo para recibir valores en `ghl_pipeline_stage` |
+| SOP-09 | `Branding & Identity` | Por definir — dashboard listo para recibir valores en `ghl_pipeline_stage` |
 
 **Cómo se conecta:** el dashboard escribe a `client_services.ghl_pipeline_stage TEXT` (campo agregado en la migración `20260429154331`). El valor que guardamos ahí es el nombre exacto de la etapa en GHL. La sincronización (vía webhook desde Supabase a GHL) es trabajo de Phase 2 (todavía no construido — Karen dirige cuando estemos listos).
 
@@ -382,6 +411,22 @@ Para evitar confusión, esto **NO** te requiere acción:
 **Quién:** Karen + Javi (decisión de arquitectura) → migration-author agent (implementación).
 
 **Tracking:** este gate sale de la lista cuando la migración encriptada esté aplicada y los plaintext columns dropeados.
+
+### G2. Setear `department` al agregar nuevas filas en `services`
+
+**Contexto:** la migración `20260502190000_task_dept_scoping.sql` agrega una columna `department` a la tabla `services` (valores posibles: `accounting | branding | it | admin`). Esta columna determina qué jefe de departamento ve las tareas generadas por ese servicio. La migración setea un default para los servicios existentes, pero **las nuevas filas que Karen agregue en producción deben tener `department` seteado manualmente**.
+
+**Acción requerida:** cada vez que agregues una fila nueva en la tabla `services` en producción, completá el campo `department` con uno de los cuatro valores. Si lo dejás vacío (NULL), las tareas de ese servicio no aparecerán en el dashboard del departamento correspondiente.
+
+**Quién:** Karen (acción operativa, no requiere código).
+
+**Tracking:** este gate es permanente — aplica a cada nuevo servicio que se agregue.
+
+### G3. Visibilidad de precios (informativo — no bloquea producción)
+
+**Contexto:** los campos `services.base_price` y `client_services.price_override` son visibles a nivel de fila en Supabase. La protección actual es solo de UI: las rutas y tabs de pricing solo se muestran a usuarios admin. Para el equipo interno de confianza, esto es aceptable.
+
+**Acción opcional (si Karen lo requiere):** reforzar con column-level masking en Supabase para que usuarios no-admin no puedan leer esos campos ni siquiera via API directa. Contactar a Javi para implementar cuando el nivel de sensibilidad lo requiera.
 
 ---
 
